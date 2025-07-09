@@ -8,18 +8,22 @@ jobs:
   add-subscriber:
     runs-on: ubuntu-latest
     steps:
-      - name: 🔍 Dump full GitHub event payload
-        run: echo '${{ toJSON(github.event) }}'
+    #  - name: 🔍 Dump full GitHub event payload
+     #   run: echo '${{ toJSON(github.event) }}'
         
-      - name: 🧪 Dump entire event payload
-        run: |
-          echo "📦 Event Payload JSON:"
-          echo '${{ toJSON(github.event) }}'
+      #- name: 🧪 Dump entire event payload
+       # run: |
+        #  echo "📦 Event Payload JSON:"
+         # echo '${{ toJSON(github.event) }}'
       
-      - name: 🔍 Show raw email value (if any)
-        run: |
-        echo "📧 Email from payload: ${{ github.event.client_payload.email || 'N/A' }}"
-    
+      #- name: 🔍 Show raw email value (if any)
+       # run: |
+        #echo "📧 Email from payload: ${{ github.event.client_payload.email || 'N/A' }}"
+      - checkout
+      - run: dump event payload for testing
+      - run: update CSV
+      - run: send welcome email to user & HR
+      
       - name: Checkout repo
         uses: actions/checkout@v4
 
