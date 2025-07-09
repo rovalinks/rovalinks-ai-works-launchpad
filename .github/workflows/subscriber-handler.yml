@@ -6,18 +6,29 @@ permissions:
 on:
   repository_dispatch:
     types: [new_subscriber]
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'Subscriber email'
+        required: true
+        type: string
 
 jobs:
   add-subscriber:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
         with:
           persist-credentials: true
 
-      - name: Dump payload for debugging
-        run: echo "EMAIL=${{ github.event.client_payload.email }}"
+      - name: Debug email
+        run: |
+          echo "EMAIL (repo_dispatch) = ${{ github.event.client_payload.email }}"
+          echo "EMAIL (manual) = ${{ github.event.inputs.email }}"
+
+      - name: Set EMAIL variable
+        run: echo "EMAIL_VAL=${{ github.event.client_payload.email || github.event.inputs.email }}" >> $GITHUB_ENV
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -33,7 +44,7 @@ jobs:
           import os, pandas as pd
           from datetime import datetime
 
-          email = "${{ github.event.client_payload.email }}"
+          email = os.getenv("EMAIL_VAL")
           file = "subscribers/users.csv"
           df = pd.read_csv(file) if os.path.exists(file) else pd.DataFrame(columns=["email", "timestamp"])
           if email not in df["email"].values:
@@ -43,16 +54,17 @@ jobs:
 
       - name: Commit updated CSV
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
           git add subscribers/users.csv
-          git commit -m "Add new subscriber: ${{ github.event.client_payload.email }}" || echo "No changes to commit"
+          git commit -m "Add new subscriber: ${{ env.EMAIL_VAL }}" || echo "No changes to commit"
           git push
 
       - name: Send welcome email via Zoho
         env:
           Z_EMAIL: ${{ secrets.Z_EMAIL }}
           Z_PASS: ${{ secrets.Z_PASS }}
+          EMAIL: ${{ env.EMAIL_VAL }}
         run: |
           python <<EOF
           import smtplib
@@ -60,7 +72,7 @@ jobs:
           from email.mime.text import MIMEText
           import os
 
-          email = "${{ github.event.client_payload.email }}"
+          email = os.environ["EMAIL"]
           from_addr = os.environ["Z_EMAIL"]
           hr_addr = "hr@rovalinks.com"
           password = os.environ["Z_PASS"]
