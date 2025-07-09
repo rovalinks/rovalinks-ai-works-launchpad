@@ -26,15 +26,12 @@ jobs:
           import os
           import pandas as pd
           from datetime import datetime
-
           email = "${{ github.event.client_payload.email }}"
           file_path = "subscribers/users.csv"
-
           if os.path.exists(file_path):
               df = pd.read_csv(file_path)
           else:
               df = pd.DataFrame(columns=["email", "timestamp"])
-
           if email not in df["email"].values:
               df.loc[len(df)] = [email, datetime.utcnow().isoformat()]
               df.to_csv(file_path, index=False)
@@ -70,64 +67,22 @@ jobs:
           msg["From"] = from_addr
           msg["To"] = to_addr
 
-          html = """<!DOCTYPE html>
+          html = """\
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
   <title>Welcome to Rovalinks</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6f8;
-      margin: 0;
-      padding: 0;
-      color: #333;
-    }
-    .container {
-      max-width: 600px;
-      margin: 40px auto;
-      background: #ffffff;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    .header {
-      background: linear-gradient(135deg, #5A67D8, #805AD5);
-      color: white;
-      padding: 30px;
-      text-align: center;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 28px;
-    }
-    .content {
-      padding: 30px;
-    }
-    .content p {
-      font-size: 16px;
-      line-height: 1.6;
-    }
-    .highlight {
-      color: #5A67D8;
-      font-weight: 600;
-    }
-    .footer {
-      text-align: center;
-      padding: 20px;
-      font-size: 14px;
-      color: #888;
-    }
-    .cta-button {
-      display: inline-block;
-      margin-top: 20px;
-      background-color: #5A67D8;
-      color: white;
-      text-decoration: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      font-weight: bold;
-    }
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 0; color: #333; }
+    .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #5A67D8, #805AD5); color: white; padding: 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .content { padding: 30px; }
+    .content p { font-size: 16px; line-height: 1.6; }
+    .highlight { color: #5A67D8; font-weight: 600; }
+    .footer { text-align: center; padding: 20px; font-size: 14px; color: #888; }
+    .cta-button { display: inline-block; margin-top: 20px; background-color: #5A67D8; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -140,9 +95,7 @@ jobs:
       <p>Thank you for signing up for updates from <span class="highlight">Rovalinks AI Works</span>!</p>
       <p>We’re building the next generation of AI-powered products — fast, innovative, and built to make an impact.</p>
       <p>You'll be the first to know about early access opportunities, product launches, and exciting updates from the team.</p>
-      
       <a href="https://rovalinks.com" class="cta-button">Visit Our Website</a>
-
       <p style="margin-top: 30px;">🚀 Let's shape the future of AI — together.</p>
       <p>The Rovalinks Team</p>
     </div>
@@ -153,6 +106,7 @@ jobs:
 </body>
 </html>
 """
+
           msg.attach(MIMEText(html, "html"))
 
           server = smtplib.SMTP_SSL("smtp.zoho.com", 465)
