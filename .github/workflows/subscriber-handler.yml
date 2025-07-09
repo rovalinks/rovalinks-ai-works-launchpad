@@ -14,7 +14,12 @@ jobs:
           echo "🚀 Event triggered!"
           echo "Event Type: ${{ github.event.action }}"
           echo "Payload email: ${{ github.event.client_payload.email }}"
-          
+
+      - name: 🧪 Dump full GitHub event payload
+        run: |
+          echo "📦 Dumping full GitHub event context:"
+          echo '${{ toJSON(github.event) }}'
+    
       - name: Checkout repo
         uses: actions/checkout@v4
 
