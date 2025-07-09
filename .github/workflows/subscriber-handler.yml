@@ -35,7 +35,7 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
+      - name: Install pandas
         run: pip install pandas
 
       - name: Update subscribers CSV
@@ -46,7 +46,7 @@ jobs:
 
           email = os.getenv("EMAIL_VAL")
           file = "subscribers/users.csv"
-          df = pd.read_csv(file) if os.path.exists(file) else pd.DataFrame(columns=["email","timestamp"])
+          df = pd.read_csv(file) if os.path.exists(file) else pd.DataFrame(columns=["email", "timestamp"])
           if email not in df["email"].values:
               df.loc[len(df)] = [email, datetime.utcnow().isoformat()]
               df.to_csv(file, index=False)
@@ -82,40 +82,7 @@ jobs:
           msg["From"] = from_addr
           msg["To"] = email
 
-          html = """<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <title>Welcome to Rovalinks</title>
-  <style>
-    body {font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; color: #333; margin:0; padding:0;}
-    .container { max-width:600px; margin:40px auto; background:#fff; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden;}
-    .header { background:linear-gradient(135deg,#5A67D8,#805AD5); color:white; padding:30px; text-align:center;}
-    .header h1 { margin:0; font-size:28px;}
-    .content { padding:30px;}
-    .content p { font-size:16px; line-height:1.6;}
-    .highlight { color:#5A67D8; font-weight:600;}
-    .footer { text-align:center; padding:20px; font-size:14px; color:#888;}
-    .cta-button { display:inline-block; margin-top:20px; background-color:#5A67D8; color:white; text-decoration:none; padding:12px 24px; border-radius:6px; font-weight:bold;}
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header"><h1>🎉 Welcome to Rovalinks AI Works!</h1></div>
-    <div class="content">
-      <p>Hi there,</p>
-      <p>Thank you for signing up for updates from <span class="highlight">Rovalinks AI Works</span>!</p>
-      <p>We’re building the next generation of AI‑powered products — fast, innovative, and built to make an impact.</p>
-      <p>You'll be the first to know about early access opportunities, product launches, and exciting updates from the team.</p>
-      <a href="https://rovalinks.com" class="cta-button">Visit Our Website</a>
-      <p style="margin-top:30px;">🚀 Let's shape the future of AI — together.</p>
-      <p>The Rovalinks Team</p>
-    </div>
-    <div class="footer">© 2025 Rovalinks AI Works. All rights reserved.</div>
-  </div>
-</body>
-</html>"""
-
+          html = """<html>Test Email</html>"""
           msg.attach(MIMEText(html, "html"))
 
           server = smtplib.SMTP_SSL("smtp.zoho.in", 465)
