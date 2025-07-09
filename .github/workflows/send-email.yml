@@ -1,0 +1,134 @@
+name: Send Welcome Email
+
+on:
+  push:
+    paths:
+      - 'subscribers/**'
+
+jobs:
+  send_email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install mail dependencies
+        run: pip install yagmail
+
+      - name: Send emails
+        run: |
+          import os, glob, yagmail
+
+          z_user = os.getenv("Z_EMAIL")
+          z_pass = os.getenv("Z_PASS")
+
+          yag = yagmail.SMTP(z_user, z_pass)
+
+          # Get latest email file
+          files = sorted(glob.glob("subscribers/*.txt"), key=os.path.getmtime)
+          latest = files[-1]
+
+          with open(latest, "r") as f:
+              user_email = f.read().strip()
+
+          # Send to HR
+          yag.send(to=z_user, subject="New Subscriber", contents=f"{user_email} joined the waitlist.")
+
+          # Send to User
+          yag.send(
+              to=user_email,
+              subject="🎉 Welcome to Rovalinks AI Works!",
+              contents="""
+             <!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Welcome to Rovalinks</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .header {
+      background: linear-gradient(135deg, #5A67D8, #805AD5);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .content {
+      padding: 30px;
+    }
+    .content p {
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .highlight {
+      color: #5A67D8;
+      font-weight: 600;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      color: #888;
+    }
+    .cta-button {
+      display: inline-block;
+      margin-top: 20px;
+      background-color: #5A67D8;
+      color: white;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎉 Welcome to Rovalinks AI Works!</h1>
+    </div>
+    <div class="content">
+      <p>Hi there,</p>
+      <p>Thank you for signing up for updates from <span class="highlight">Rovalinks AI Works</span>!</p>
+      <p>We’re building the next generation of AI-powered products - fast, innovative, and built to make an impact.</p>
+      <p>You'll be the first to know about early access opportunities, product launches, and exciting updates from the team.</p>
+      
+      <a href="https://rovalinks.com" class="cta-button">Visit Our Website</a>
+
+      <p style="margin-top: 30px;">🚀 Let's shape the future of AI - together.</p>
+      <p>The Rovalinks Team</p>
+    </div>
+    <div class="footer">
+      © 2025 Rovalinks AI Works. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
+"""
+          )
+        shell: python
+        env:
+          Z_EMAIL: ${{ secrets.Z_EMAIL }}
+          Z_PASS: ${{ secrets.Z_PASS }}
