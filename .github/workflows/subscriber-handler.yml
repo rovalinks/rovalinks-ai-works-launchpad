@@ -7,35 +7,20 @@ on:
 jobs:
   add-subscriber:
     runs-on: ubuntu-latest
+
     steps:
-    #  - name: 🔍 Dump full GitHub event payload
-     #   run: echo '${{ toJSON(github.event) }}'
-        
-      #- name: 🧪 Dump entire event payload
-       # run: |
-        #  echo "📦 Event Payload JSON:"
-         # echo '${{ toJSON(github.event) }}'
-      
-      #- name: 🔍 Show raw email value (if any)
-       # run: |
-        #echo "📧 Email from payload: ${{ github.event.client_payload.email || 'N/A' }}"
-      - checkout
-      - run: dump event payload for testing
-      - run: update CSV
-      - run: send welcome email to user & HR
-      
-      - name: Checkout repo
+      - name: 🔽 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
+      - name: 📦 Install Python Dependencies
         run: pip install pandas
 
-      - name: Update CSV
+      - name: 📈 Update Subscriber CSV
         run: |
           python <<EOF
           import os
@@ -55,7 +40,7 @@ jobs:
               df.to_csv(file_path, index=False)
           EOF
 
-      - name: Commit changes
+      - name: 📤 Commit & Push CSV Update
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
@@ -63,7 +48,7 @@ jobs:
           git commit -m "Add new subscriber: ${{ github.event.client_payload.email }}" || echo "No changes to commit"
           git push
 
-      - name: Send welcome email via Zoho
+      - name: 📧 Send Welcome Email via Zoho
         env:
           Z_EMAIL: ${{ secrets.Z_EMAIL }}
           Z_PASS: ${{ secrets.Z_PASS }}
