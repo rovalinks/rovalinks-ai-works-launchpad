@@ -22,22 +22,22 @@ jobs:
 
       - name: 📈 Update Subscriber CSV
         run: |
-          python -c "
+          cat <<EOF | python3
 import os
 import pandas as pd
 from datetime import datetime
 
-email = '${{ github.event.client_payload.email }}'
-file_path = 'subscribers/users.csv'
+email = "${{ github.event.client_payload.email }}"
+file_path = "subscribers/users.csv"
 if os.path.exists(file_path):
     df = pd.read_csv(file_path)
 else:
-    df = pd.DataFrame(columns=['email', 'timestamp'])
+    df = pd.DataFrame(columns=["email", "timestamp"])
 
-if email not in df['email'].values:
+if email not in df["email"].values:
     df.loc[len(df)] = [email, datetime.utcnow().isoformat()]
     df.to_csv(file_path, index=False)
-"
+EOF
 
       - name: 📤 Commit & Push CSV Update
         run: |
@@ -52,24 +52,25 @@ if email not in df['email'].values:
           Z_EMAIL: ${{ secrets.Z_EMAIL }}
           Z_PASS: ${{ secrets.Z_PASS }}
         run: |
-          python -c "
+          cat <<EOF | python3
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
 
-email = '${{ github.event.client_payload.email }}'
-from_addr = os.environ['Z_EMAIL']
+email = "${{ github.event.client_payload.email }}"
+from_addr = os.environ["Z_EMAIL"]
 to_addr = email
-hr_addr = 'hr@rovalinks.com'
-password = os.environ['Z_PASS']
+hr_addr = "hr@rovalinks.com"
+password = os.environ["Z_PASS"]
 
-msg = MIMEMultipart('alternative')
-msg['Subject'] = 'Welcome to Rovalinks AI Works!'
-msg['From'] = from_addr
-msg['To'] = to_addr
+msg = MIMEMultipart("alternative")
+msg["Subject"] = "Welcome to Rovalinks AI Works!"
+msg["From"] = from_addr
+msg["To"] = to_addr
 
-html = '''<!DOCTYPE html>
+html = """\
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset='UTF-8' />
@@ -105,12 +106,13 @@ html = '''<!DOCTYPE html>
     </div>
   </div>
 </body>
-</html>'''
+</html>
+"""
 
-msg.attach(MIMEText(html, 'html'))
+msg.attach(MIMEText(html, "html"))
 
-server = smtplib.SMTP_SSL('smtp.zoho.com', 465)
+server = smtplib.SMTP_SSL("smtp.zoho.com", 465)
 server.login(from_addr, password)
 server.sendmail(from_addr, [to_addr, hr_addr], msg.as_string())
 server.quit()
-"
+EOF
