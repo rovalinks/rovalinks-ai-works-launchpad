@@ -9,16 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     
-      - name: 🔍 Debug Event
+      - name: 🧪 Dump entire event payload
         run: |
-          echo "🚀 Event triggered!"
-          echo "Event Type: ${{ github.event.action }}"
-          echo "Payload email: ${{ github.event.client_payload.email }}"
-
-      - name: 🧪 Dump full GitHub event payload
-        run: |
-          echo "📦 Dumping full GitHub event context:"
+          echo "📦 Event Payload JSON:"
           echo '${{ toJSON(github.event) }}'
+      
+      - name: 🔍 Show raw email value (if any)
+        run: |
+          echo "📧 Email from payload: ${{ github.event.client_payload.email || 'N/A' }}"
     
       - name: Checkout repo
         uses: actions/checkout@v4
