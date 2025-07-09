@@ -13,7 +13,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      /* <BrowserRouter basename="/rovalinks-ai-works-launchpad">
+      /** <BrowserRouter basename="/rovalinks-ai-works-launchpad">
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="*" element={<NotFound />} />
