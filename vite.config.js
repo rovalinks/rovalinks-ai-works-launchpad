@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "/", // ← Important for GitHub Pages and custom domain
+  base: "/rovalinks-ai-works-launchpad/",  // ✅ FIXED BASE PATH
   server: {
     host: "::",
     port: 8080,
