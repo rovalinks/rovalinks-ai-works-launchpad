@@ -3,10 +3,10 @@ name: Deploy Vite site to GitHub Pages
 on:
   push:
     branches:
-      - testing  # change if your default branch is 'master'
+      - testing
 
 permissions:
-  contents: write  # 🔑 REQUIRED to push to gh-pages
+  contents: write  # still good to have, but won't be used since we're switching to PAT
 
 jobs:
   deploy:
@@ -29,5 +29,5 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.GH_PAT }}  # 👈 using your PAT here
           publish_dir: ./dist
