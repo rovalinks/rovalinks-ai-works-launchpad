@@ -1,0 +1,11 @@
+name: Debug Dispatch Payload
+
+on:
+  repository_dispatch:
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print full dispatch payload
+        run: echo '${{ toJSON(github.event) }}'
