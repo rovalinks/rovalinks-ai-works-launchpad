@@ -20,8 +20,8 @@ export const HeroSection = () => {
     if (!validateEmail(email)) {
       toast({
         variant: 'destructive',
-        title: 'Invalid email',
-        description: 'Please enter a valid email address.',
+        title: 'Oops! Enter a valid email.',
+        description: 'Please check your email format and try again.',
       });
       return;
     }
@@ -29,26 +29,38 @@ export const HeroSection = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
+      const response = await fetch(
+        'https://api.github.com/repos/rovalinks-ai-works-launchpad/subscribers/dispatches',
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/vnd.github.everest-preview+json',
+            Authorization:
+              'Bearer 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',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            event_type: 'new_subscriber',
+            client_payload: { email },
+          }),
+        }
+      );
 
-      if (!res.ok) throw new Error('Subscription failed');
+      if (!response.ok) {
+        throw new Error('GitHub dispatch failed');
+      }
 
       toast({
         title: "🎉 You're on the list!",
         description: "We'll keep you posted on our latest AI innovations.",
         className: 'bg-primary text-primary-foreground',
       });
-
       setEmail('');
-    } catch (err) {
+    } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Subscription failed',
-        description: 'Something went wrong. Please try again later.',
+        title: 'Something went wrong',
+        description: 'Unable to subscribe. Please try again later.',
       });
     }
 
@@ -57,15 +69,11 @@ export const HeroSection = () => {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-background">
-      {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
         style={{ backgroundImage: `url(${heroBackground})` }}
       />
-      {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
-
-      {/* Content */}
       <div className="relative z-10 container mx-auto px-4 text-center">
         <div className="animate-fade-in mb-8">
           <h1 className="text-5xl md:text-7xl font-bold mb-2">
@@ -86,7 +94,6 @@ export const HeroSection = () => {
             We create AI-powered products that fuel innovation, speed, and impact.
           </p>
 
-          {/* Email Signup */}
           <div className="animate-scale-in max-w-md mx-auto">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-3">
@@ -114,7 +121,7 @@ export const HeroSection = () => {
         </div>
       </div>
 
-      {/* Decorative Elements */}
+      {/* Decorative elements */}
       <div className="absolute top-20 left-10 w-20 h-20 bg-primary/20 rounded-full blur-xl animate-pulse" />
       <div className="absolute bottom-32 right-16 w-32 h-32 bg-secondary/20 rounded-full blur-2xl animate-pulse" />
       <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-accent/30 rounded-full blur-lg animate-pulse" />
