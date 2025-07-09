@@ -1,5 +1,8 @@
 name: Handle New Subscriber
 
+permissions:
+  contents: write
+
 on:
   repository_dispatch:
     types: [new_subscriber]
@@ -9,7 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Dump payload for debugging
         run: echo "EMAIL=${{ github.event.client_payload.email }}"
