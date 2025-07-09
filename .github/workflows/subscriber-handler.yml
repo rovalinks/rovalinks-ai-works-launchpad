@@ -22,20 +22,22 @@ jobs:
 
       - name: 📈 Update Subscriber CSV
         run: |
-          python <<EOF
-          import os
-          import pandas as pd
-          from datetime import datetime
-          email = "${{ github.event.client_payload.email }}"
-          file_path = "subscribers/users.csv"
-          if os.path.exists(file_path):
-              df = pd.read_csv(file_path)
-          else:
-              df = pd.DataFrame(columns=["email", "timestamp"])
-          if email not in df["email"].values:
-              df.loc[len(df)] = [email, datetime.utcnow().isoformat()]
-              df.to_csv(file_path, index=False)
-          EOF
+          python -c "
+import os
+import pandas as pd
+from datetime import datetime
+
+email = '${{ github.event.client_payload.email }}'
+file_path = 'subscribers/users.csv'
+if os.path.exists(file_path):
+    df = pd.read_csv(file_path)
+else:
+    df = pd.DataFrame(columns=['email', 'timestamp'])
+
+if email not in df['email'].values:
+    df.loc[len(df)] = [email, datetime.utcnow().isoformat()]
+    df.to_csv(file_path, index=False)
+"
 
       - name: 📤 Commit & Push CSV Update
         run: |
@@ -50,28 +52,27 @@ jobs:
           Z_EMAIL: ${{ secrets.Z_EMAIL }}
           Z_PASS: ${{ secrets.Z_PASS }}
         run: |
-          python <<EOF
-          import smtplib
-          from email.mime.multipart import MIMEMultipart
-          from email.mime.text import MIMEText
-          import os
+          python -c "
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import os
 
-          email = "${{ github.event.client_payload.email }}"
-          from_addr = os.environ["Z_EMAIL"]
-          to_addr = email
-          hr_addr = "hr@rovalinks.com"
-          password = os.environ["Z_PASS"]
+email = '${{ github.event.client_payload.email }}'
+from_addr = os.environ['Z_EMAIL']
+to_addr = email
+hr_addr = 'hr@rovalinks.com'
+password = os.environ['Z_PASS']
 
-          msg = MIMEMultipart("alternative")
-          msg["Subject"] = "Welcome to Rovalinks AI Works!"
-          msg["From"] = from_addr
-          msg["To"] = to_addr
+msg = MIMEMultipart('alternative')
+msg['Subject'] = 'Welcome to Rovalinks AI Works!'
+msg['From'] = from_addr
+msg['To'] = to_addr
 
-          html = """\
-<!DOCTYPE html>
+html = '''<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset='UTF-8' />
   <title>Welcome to Rovalinks</title>
   <style>
     body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 0; color: #333; }
@@ -86,31 +87,30 @@ jobs:
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
+  <div class='container'>
+    <div class='header'>
       <h1>🎉 Welcome to Rovalinks AI Works!</h1>
     </div>
-    <div class="content">
+    <div class='content'>
       <p>Hi there,</p>
-      <p>Thank you for signing up for updates from <span class="highlight">Rovalinks AI Works</span>!</p>
+      <p>Thank you for signing up for updates from <span class='highlight'>Rovalinks AI Works</span>!</p>
       <p>We’re building the next generation of AI-powered products — fast, innovative, and built to make an impact.</p>
       <p>You'll be the first to know about early access opportunities, product launches, and exciting updates from the team.</p>
-      <a href="https://rovalinks.com" class="cta-button">Visit Our Website</a>
-      <p style="margin-top: 30px;">🚀 Let's shape the future of AI — together.</p>
+      <a href='https://rovalinks.com' class='cta-button'>Visit Our Website</a>
+      <p style='margin-top: 30px;'>🚀 Let's shape the future of AI — together.</p>
       <p>The Rovalinks Team</p>
     </div>
-    <div class="footer">
+    <div class='footer'>
       © 2025 Rovalinks AI Works. All rights reserved.
     </div>
   </div>
 </body>
-</html>
-"""
+</html>'''
 
-          msg.attach(MIMEText(html, "html"))
+msg.attach(MIMEText(html, 'html'))
 
-          server = smtplib.SMTP_SSL("smtp.zoho.com", 465)
-          server.login(from_addr, password)
-          server.sendmail(from_addr, [to_addr, hr_addr], msg.as_string())
-          server.quit()
-          EOF
+server = smtplib.SMTP_SSL('smtp.zoho.com', 465)
+server.login(from_addr, password)
+server.sendmail(from_addr, [to_addr, hr_addr], msg.as_string())
+server.quit()
+"
