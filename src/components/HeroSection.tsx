@@ -36,7 +36,7 @@ export const HeroSection = () => {
           headers: {
             Accept: 'application/vnd.github.everest-preview+json',
             Authorization:
-              'Bearer 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',
+              'Bearer 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',
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
