@@ -8,7 +8,9 @@ jobs:
   add-subscriber:
     runs-on: ubuntu-latest
     steps:
-    
+      - name: 🔍 Dump full GitHub event payload
+        run: echo '${{ toJSON(github.event) }}'
+        
       - name: 🧪 Dump entire event payload
         run: |
           echo "📦 Event Payload JSON:"
