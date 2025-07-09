@@ -8,6 +8,13 @@ jobs:
   add-subscriber:
     runs-on: ubuntu-latest
     steps:
+    
+      - name: 🔍 Debug Event
+        run: |
+          echo "🚀 Event triggered!"
+          echo "Event Type: ${{ github.event.action }}"
+          echo "Payload email: ${{ github.event.client_payload.email }}"
+          
       - name: Checkout repo
         uses: actions/checkout@v4
 
