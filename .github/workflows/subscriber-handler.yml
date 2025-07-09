@@ -18,7 +18,7 @@ jobs:
       
       - name: 🔍 Show raw email value (if any)
         run: |
-          echo "📧 Email from payload: ${{ github.event.client_payload.email || 'N/A' }}"
+          echo "📧 Email from payload: ${{ github.event.client_payload.email}}"
     
       - name: Checkout repo
         uses: actions/checkout@v4
