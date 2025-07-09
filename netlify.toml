@@ -1,0 +1,6 @@
+[build]
+  functions = "functions"    # folder where your serverless functions live
+  publish = "public"         # or your site's build output directory
+
+[functions]
+  node_bundler = "esbuild"
