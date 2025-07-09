@@ -5,6 +5,9 @@ on:
     branches:
       - testing  # change if your default branch is 'master'
 
+permissions:
+  contents: write  # 🔑 REQUIRED to push to gh-pages
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
