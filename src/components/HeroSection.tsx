@@ -29,7 +29,7 @@ export const HeroSection = () => {
     setIsLoading(true);
 
     try {
-      const token = 'GITHUB_PERSONAL_ACCESS_TOKEN_HERE'; // 🔒 Replace with your real token (remove after testing)
+      const token = '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'; // 🔒 Replace with your real token (remove after testing)
       const owner = 'rovalinks';
       const repo = 'rovalinks-ai-works-launchpad';
       const path = 'subscribers/users.csv';
