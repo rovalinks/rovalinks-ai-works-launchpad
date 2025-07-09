@@ -36,10 +36,7 @@ export const HeroSection = () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            event_type: 'new_subscriber',
-            client_payload: { email },
-          }),
+          body: JSON.stringify({ email }),
         }
       );
 
