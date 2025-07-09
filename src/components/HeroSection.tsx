@@ -30,13 +30,10 @@ export const HeroSection = () => {
 
     try {
       const response = await fetch(
-        'https://api.github.com/repos/rovalinks-ai-works-launchpad/subscribers/dispatches',
+        'https://github-dispatch-proxy.rovalinksit.workers.dev',
         {
           method: 'POST',
           headers: {
-            Accept: 'application/vnd.github.everest-preview+json',
-            Authorization:
-              'Bearer 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',
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
