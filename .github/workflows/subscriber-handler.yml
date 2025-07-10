@@ -82,7 +82,8 @@ jobs:
           msg["From"] = from_addr
           msg["To"] = email
 
-          html = """\ <html>
+          html = """\
+          <html>
             <head>
               <meta charset='UTF-8'>
               <title>Welcome to Rovalinks</title>
