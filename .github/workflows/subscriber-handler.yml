@@ -22,46 +22,48 @@ jobs:
         with:
           persist-credentials: true
 
-      - name: Debug email
+      - name: Debug email input
         run: |
-          echo "EMAIL (repo_dispatch) = ${{ github.event.client_payload.email }}"
-          echo "EMAIL (manual) = ${{ github.event.inputs.email }}"
+          echo "Repo Dispatch Email: ${{ github.event.client_payload.email }}"
+          echo "Manual Email: ${{ github.event.inputs.email }}"
 
       - name: Set EMAIL variable
-        run: echo "EMAIL_VAL=${{ github.event.client_payload.email || github.event.inputs.email }}" >> $GITHUB_ENV
+        run: |
+          echo "EMAIL_VAL=${{ github.event.client_payload.email || github.event.inputs.email }}" >> $GITHUB_ENV
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install pandas
+      - name: Install dependencies
         run: pip install pandas
 
-      - name: Process Subscription
-        id: subcheck
+      - name: Check & Update Subscriber List
+        id: check_sub
         run: |
           python <<EOF
-          import os, pandas as pd
+          import os
+          import pandas as pd
           from datetime import datetime
 
           email = os.getenv("EMAIL_VAL")
           os.makedirs("subscribers", exist_ok=True)
-          file = "subscribers/users.csv"
-          df = pd.read_csv(file) if os.path.exists(file) else pd.DataFrame(columns=["email", "timestamp"])
+          filepath = "subscribers/users.csv"
+          df = pd.read_csv(filepath) if os.path.exists(filepath) else pd.DataFrame(columns=["email", "timestamp"])
 
           if email in df["email"].values:
-              with open("subscribers/state.txt", "w") as f:
-                  f.write("exists")
+              status = "exists"
           else:
               df.loc[len(df)] = [email, datetime.utcnow().isoformat()]
-              df.to_csv(file, index=False)
-              with open("subscribers/state.txt", "w") as f:
-                  f.write("new")
+              df.to_csv(filepath, index=False)
+              status = "new"
+
+          with open("subscribers/state.txt", "w") as f:
+              f.write(status)
           EOF
 
-      - name: Commit updated CSV
-        if: success()
+      - name: Commit changes if new subscriber
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
@@ -69,12 +71,10 @@ jobs:
           git commit -m "Add new subscriber: ${{ env.EMAIL_VAL }}" || echo "No changes to commit"
           git push
 
-      - name: Read subscription state
-        id: state
-        run: |
-          echo "SUB_STATE=$(cat subscribers/state.txt)" >> $GITHUB_ENV
+      - name: Set subscription state
+        run: echo "SUB_STATE=$(cat subscribers/state.txt)" >> $GITHUB_ENV
 
-      - name: Send email via Zoho
+      - name: Send Emails via Zoho
         env:
           Z_EMAIL: ${{ secrets.Z_EMAIL }}
           Z_PASS: ${{ secrets.Z_PASS }}
@@ -82,94 +82,67 @@ jobs:
           SUB_STATE: ${{ env.SUB_STATE }}
         run: |
           python <<EOF
+          import os
           import smtplib
           from email.mime.multipart import MIMEMultipart
           from email.mime.text import MIMEText
-          import os
 
-          email = os.environ["EMAIL"]
-          from_addr = os.environ["Z_EMAIL"]
-          hr_addr = "hr@rovalinks.com"
+          user_email = os.environ["EMAIL"]
+          from_email = os.environ["Z_EMAIL"]
           password = os.environ["Z_PASS"]
-          state = os.environ["SUB_STATE"]
+          sub_state = os.environ["SUB_STATE"]
+          admin_email = "hr@rovalinks.com"
 
-          msg = MIMEMultipart("alternative")
-          msg["From"] = from_addr
-          msg["To"] = email
+          server = smtplib.SMTP_SSL("smtp.zoho.in", 465)
+          server.login(from_email, password)
 
-          if state == "new":
-              msg["Subject"] = "Welcome to Rovalinks AI Works!"
+          # Prepare email to user
+          user_msg = MIMEMultipart("alternative")
+          user_msg["From"] = from_email
+          user_msg["To"] = user_email
+
+          if sub_state == "new":
+              user_msg["Subject"] = "Welcome to Rovalinks AI Works!"
               html = """\
               <html>
-              <head>
-                <meta charset='UTF-8'>
-                <title>Welcome to Rovalinks</title>
-                <style>
-                  body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 0; color: #333; }
-                  .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-                  .header { background: linear-gradient(135deg, #5A67D8, #805AD5); color: white; padding: 30px; text-align: center; }
-                  .header h1 { margin: 0; font-size: 28px; }
-                  .content { padding: 30px; }
-                  .highlight { color: #5A67D8; font-weight: 600; }
-                  .spam-note { margin-top: 25px; font-size: 14px; color: #666; background-color: #f0f1f5; padding: 15px; border-left: 4px solid #805AD5; border-radius: 4px; }
-                  .cta-button { display: inline-block; margin-top: 20px; background-color: #5A67D8; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; }
-                  .footer { text-align: center; padding: 20px; font-size: 14px; color: #888; }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <div class="header">
-                    <h1>🎉 Welcome to Rovalinks AI Works!</h1>
-                  </div>
-                  <div class="content">
-                    <p>Hi there,</p>
-                    <p>Thank you for signing up for updates from <span class="highlight">Rovalinks AI Works</span>!</p>
-                    <p>We’re building the next generation of AI-powered products — fast, innovative, and built to make an impact.</p>
-                    <p>You'll be the first to know about early access opportunities, product launches, and exciting updates from the team.</p>
-                    <div class="spam-note">
-                      📬 Not seeing our emails? Be sure to check your spam or promotions folder - and mark us as “Not Spam” so you don’t miss a thing!
-                    </div>
-                    <a href="https://rovalinks.com" class="cta-button">Visit Our Website</a>
-                    <p style="margin-top: 30px;">🚀 Let's shape the future of AI — together.</p>
-                    <p>The Rovalinks Team</p>
-                  </div>
-                  <div class="footer">
-                    © 2025 Rovalinks AI Works. All rights reserved.
-                  </div>
+              <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; padding: 0; margin: 0;">
+                <div style="max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                  <h1 style="color: #5A67D8;">🎉 Welcome to Rovalinks AI Works!</h1>
+                  <p>Hi there,</p>
+                  <p>Thank you for signing up for updates from <strong>Rovalinks AI Works</strong>!</p>
+                  <p>You’ll get first access to new features, product launches, and updates.</p>
+                  <p style="margin-top: 20px; font-size: 14px; background: #f0f1f5; padding: 10px; border-left: 4px solid #805AD5;">
+                    📬 Check your spam/promotions folder and mark us as "Not Spam".
+                  </p>
+                  <a href="https://rovalinks.com" style="display: inline-block; margin-top: 20px; background: #5A67D8; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Visit Our Website</a>
+                  <p style="margin-top: 30px;">🚀 Let's shape the future of AI — together.</p>
+                  <p>– The Rovalinks Team</p>
                 </div>
               </body>
               </html>
               """
           else:
-              msg["Subject"] = "You're already subscribed!"
+              user_msg["Subject"] = "You're already subscribed!"
               html = """\
               <html>
-              <head>
-                <meta charset='UTF-8'>
-                <title>Already Subscribed</title>
-                <style>
-                  body { font-family: 'Segoe UI', sans-serif; background-color: #fffaf0; color: #333; margin: 0; padding: 0; }
-                  .container { max-width: 600px; margin: 50px auto; background: #ffffff; border-radius: 8px; border: 1px solid #f5e0c0; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-                  .alert { padding: 20px; background-color: #fff3cd; border-left: 6px solid #ffecb5; font-size: 16px; border-radius: 4px; }
-                  h2 { color: #d18b00; }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <h2>👋 You're already subscribed!</h2>
-                  <div class="alert">
-                    No worries - you're already on the list. Stay tuned for exciting updates, early access invites, and AI breakthroughs from the Rovalinks team!
-                  </div>
-                  <p style="margin-top: 20px;">🚀 In the meantime, visit <a href="https://rovalinks.com">rovalinks.com</a> for more.</p>
+              <body style="font-family: 'Segoe UI', sans-serif; background: #fffaf0; padding: 30px;">
+                <div style="max-width: 600px; margin: auto; background: #fff; border: 1px solid #f5e0c0; border-radius: 8px; padding: 30px;">
+                  <h2 style="color: #d18b00;">👋 You're already subscribed!</h2>
+                  <p>No worries — you're already on our list.</p>
+                  <p>Stay tuned for product updates, early access, and AI breakthroughs.</p>
+                  <p style="margin-top: 20px;">Visit <a href="https://rovalinks.com">rovalinks.com</a> for more.</p>
                 </div>
               </body>
               </html>
               """
 
-          msg.attach(MIMEText(html, "html"))
+          user_msg.attach(MIMEText(html, "html"))
+          server.sendmail(from_email, user_email, user_msg.as_string())
 
-          server = smtplib.SMTP_SSL("smtp.zoho.in", 465)
-          server.login(from_addr, password)
-          server.sendmail(from_addr, [email, hr_addr], msg.as_string())
+          # Send plain text alert to admin if it's a new subscription
+          if sub_state == "new":
+              admin_msg = f"New subscriber added: {user_email}"
+              server.sendmail(from_email, admin_email, f"Subject: New Rovalinks Subscriber\n\n{admin_msg}")
+
           server.quit()
           EOF
