@@ -1,3 +1,4 @@
+// src/components/HeroSection.tsx
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,10 +10,7 @@ export const HeroSection = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,25 +34,36 @@ export const HeroSection = () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({email}),
+          body: JSON.stringify({ email }),
         }
       );
 
+      const resText = await response.text();
+
       if (!response.ok) {
-        throw new Error('GitHub dispatch failed');
+        throw new Error(resText);
       }
 
-      toast({
-        title: "🎉 You're on the list!",
-        description: "We'll keep you posted on our latest AI innovations.",
-        className: 'bg-primary text-primary-foreground',
-      });
+      if (resText.includes('already')) {
+        toast({
+          title: "You're already on the list!",
+          description: 'Stay tuned for exciting updates from Rovalinks AI Works.',
+          className: 'bg-yellow-100 text-yellow-800',
+        });
+      } else {
+        toast({
+          title: "🎉 You're on the list!",
+          description: "We'll keep you posted on our latest AI innovations.",
+          className: 'bg-primary text-primary-foreground',
+        });
+      }
+
       setEmail('');
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Something went wrong',
-        description: 'Unable to subscribe. Please try again later.',
+        description: error.message || 'Unable to subscribe. Please try again later.',
       });
     }
 
