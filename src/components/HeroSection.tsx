@@ -48,7 +48,7 @@ export const HeroSection = () => {
       } else if (data.status === 'exists') {
         toast({
           title: '👋 Already Subscribed!',
-          description: 'You’ve already signed up. Stay tuned for AI updates!',
+          description: 'You’ve already signed up. Stay tuned for Rovalinks AI updates!',
           className: 'bg-yellow-100 text-yellow-800',
         });
       } else {
