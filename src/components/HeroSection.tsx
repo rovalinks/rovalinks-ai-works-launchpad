@@ -1,4 +1,3 @@
-// src/components/HeroSection.tsx
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +9,8 @@ export const HeroSection = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validateEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,8 +18,8 @@ export const HeroSection = () => {
     if (!validateEmail(email)) {
       toast({
         variant: 'destructive',
-        title: 'Oops! Enter a valid email.',
-        description: 'Please check your email format and try again.',
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address.',
       });
       return;
     }
@@ -27,47 +27,44 @@ export const HeroSection = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        'https://github-dispatch-proxy.rovalinksit.workers.dev',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email }),
-        }
-      );
+      const res = await fetch('https://github-dispatch-proxy.rovalinksit.workers.dev', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
 
-      const resText = await response.text();
+      const data = await res.json();
 
-      if (!response.ok) {
-        throw new Error(resText);
+      if (!res.ok || !data?.status) {
+        throw new Error('Unexpected server response');
       }
 
-      if (resText.includes('already')) {
+      if (data.status === 'new') {
         toast({
-          title: "You're already on the list!",
-          description: 'Stay tuned for exciting updates from Rovalinks AI Works.',
+          title: "🎉 You're on the list!",
+          description: "We've added your email. Stay tuned for updates!",
+          className: 'bg-primary text-primary-foreground',
+        });
+      } else if (data.status === 'exists') {
+        toast({
+          title: '👋 Already Subscribed!',
+          description: 'You’ve already signed up. Stay tuned for AI updates!',
           className: 'bg-yellow-100 text-yellow-800',
         });
       } else {
-        toast({
-          title: "🎉 You're on the list!",
-          description: "We'll keep you posted on our latest AI innovations.",
-          className: 'bg-primary text-primary-foreground',
-        });
+        throw new Error('Unknown status');
       }
 
       setEmail('');
-    } catch (error: any) {
+    } catch (err: any) {
       toast({
         variant: 'destructive',
-        title: 'Something went wrong',
-        description: error.message || 'Unable to subscribe. Please try again later.',
+        title: 'Subscription Failed',
+        description: err.message || 'Something went wrong. Try again later.',
       });
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -123,11 +120,6 @@ export const HeroSection = () => {
           </div>
         </div>
       </div>
-
-      {/* Decorative elements */}
-      <div className="absolute top-20 left-10 w-20 h-20 bg-primary/20 rounded-full blur-xl animate-pulse" />
-      <div className="absolute bottom-32 right-16 w-32 h-32 bg-secondary/20 rounded-full blur-2xl animate-pulse" />
-      <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-accent/30 rounded-full blur-lg animate-pulse" />
     </section>
   );
 };
