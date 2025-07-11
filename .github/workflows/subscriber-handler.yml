@@ -94,7 +94,7 @@ jobs:
           # Continue script with try-except so admin is notified on failure
           try:
               import pandas as pd
-              from datetime import datetime
+              from datetime import datetime, timezone
 
               filepath = "subscribers/users.csv"
               os.makedirs("subscribers", exist_ok=True)
