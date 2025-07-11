@@ -1,5 +1,5 @@
 name: Handle New Subscriber
-  
+
 permissions:
   contents: write
 
@@ -14,14 +14,10 @@ on:
         type: string
 
 jobs:
-  subscribe-user:
+  send-email-and-buffer:
     runs-on: ubuntu-latest
-    environment:
-     name: subscriber-csv-lock
-     url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     steps:
-          
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -41,8 +37,7 @@ jobs:
       - name: Install dependencies
         run: pip install pandas requests
 
-      - name: Add subscriber to CSV
-        id: add_csv
+      - name: Append to pending.csv
         env:
           EMAIL: ${{ env.EMAIL_VAL }}
         run: |
@@ -51,61 +46,21 @@ jobs:
           from datetime import datetime, timezone
 
           email = os.getenv("EMAIL")
+          if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+              print("Invalid email."); sys.exit(1)
+
           os.makedirs("subscribers", exist_ok=True)
-          filepath = "subscribers/users.csv"
-
-          def is_valid_email(e): return re.match(r"[^@]+@[^@]+\.[^@]+", e)
-          if not is_valid_email(email):
-              print("Invalid email.")
-              sys.exit(1)
-
+          filepath = "subscribers/pending.csv"
           df = pd.read_csv(filepath) if os.path.exists(filepath) else pd.DataFrame(columns=["email", "timestamp"])
-
           if email in df["email"].values:
-              print("User already subscribed.")
-              with open("subscribers/state.txt", "w") as f: f.write("exists")
+              print("Already in pending list.")
               sys.exit(0)
 
           df.loc[len(df)] = [email, datetime.now(timezone.utc).isoformat()]
           df.to_csv(filepath, index=False)
-          with open("subscribers/state.txt", "w") as f: f.write("new")
           EOF
 
-      - name: Commit and push with retry
-        id: git_push
-        run: |
-          git config user.name "rovalinks-bot"
-          git config user.email "bot@rovalinks.com"
-
-          if [ "$(cat subscribers/state.txt)" = "new" ]; then
-            attempt=0
-            success=0
-
-            while [ $attempt -lt 3 ]; do
-              git pull --rebase || true
-              git add subscribers/users.csv
-              git commit -m "Add subscriber: ${{ env.EMAIL_VAL }}" || true
-              git push origin HEAD && success=1 && break
-              echo "Push failed. Retrying in 10 seconds..."
-              sleep 10
-              attempt=$((attempt + 1))
-            done
-
-            if [ $success -eq 0 ]; then
-              echo "push_failed" > subscribers/gitstate.txt
-            fi
-          fi
-
-      - name: Set git success env
-        run: |
-          if [ -f subscribers/gitstate.txt ]; then
-            echo "GIT_SUCCESS=false" >> $GITHUB_ENV
-          else
-            echo "GIT_SUCCESS=true" >> $GITHUB_ENV
-          fi
-
-      - name: Send welcome and admin email
-        if: env.GIT_SUCCESS == 'true'
+      - name: Send welcome + admin email
         env:
           EMAIL: ${{ env.EMAIL_VAL }}
           ZEPTOMAIL_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
@@ -150,52 +105,17 @@ jobs:
 
           admin_html = f"<html><body><p>✅ New subscriber: <strong>{email}</strong></p></body></html>"
 
-          welcome_payload = {
+          requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json={
               "from": {"address": from_email, "name": "Rovalinks AI"},
               "to": [{"email_address": {"address": email}}],
               "subject": "🎉 Welcome to Rovalinks AI Works!",
               "htmlbody": welcome_html
-          }
+          })
 
-          admin_payload = {
+          requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json={
               "from": {"address": from_email, "name": "Rovalinks AI"},
               "to": [{"email_address": {"address": admin_email}}],
               "subject": f"New subscriber added: {email}",
               "htmlbody": admin_html
-          }
-
-          requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=welcome_payload).raise_for_status()
-          requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=admin_payload).raise_for_status()
-          EOF
-
-      - name: Notify admin of failure
-        if: env.GIT_SUCCESS == 'false'
-        env:
-          EMAIL: ${{ env.EMAIL_VAL }}
-          ZEPTOMAIL_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
-        run: |
-          python <<EOF
-          import os, requests
-
-          email = os.getenv("EMAIL")
-          token = os.getenv("ZEPTOMAIL_API_TOKEN")
-          admin_email = "hr@rovalinks.com"
-          from_email = "noreply@rovalinks.com"
-
-          headers = {
-              "accept": "application/json",
-              "content-type": "application/json",
-              "authorization": f"Zoho-enczapikey {token}"
-          }
-
-          html = f"<html><body><h2 style='color:red'>❌ Git push failed after 3 attempts</h2><p>Email: {email}</p></body></html>"
-
-          payload = {
-              "from": {"address": from_email, "name": "Rovalinks AI"},
-              "to": [{"email_address": {"address": admin_email}}],
-              "subject": f"[Error] Push failed for subscriber: {email}",
-              "htmlbody": html
-          }
-
-          requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=payload)
+          })
           EOF
