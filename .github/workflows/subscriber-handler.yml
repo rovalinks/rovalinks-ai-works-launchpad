@@ -70,7 +70,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add subscribers/users.csv
-          git commit -m "Add new subscriber: ${{ env.EMAIL_VAL }}" || echo "No changes to commit"
+          git commit -m "Updated subscribers list" || echo "No changes to commit"
           git push
 
       - name: Set subscription state
