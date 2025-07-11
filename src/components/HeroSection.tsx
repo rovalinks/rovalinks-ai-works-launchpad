@@ -39,18 +39,22 @@ export const HeroSection = () => {
         throw new Error('Unexpected server response');
       }
 
+      const reminderNote = (
+        <div className="text-sm mt-2 text-muted-foreground bg-yellow-50 p-3 rounded-md border border-yellow-200 flex items-start gap-2">
+          <span>📬</span>
+          <span>
+            Not seeing our emails? Check your <strong>spam</strong> or <strong>promotions</strong> folder — and mark us as “Not Spam” so you don’t miss a thing!
+          </span>
+        </div>
+      );
+
       if (data.status === 'new') {
         toast({
           title: "🎉 You're on the list!",
           description: (
             <div className="space-y-2">
               <p>We've added your email. Stay tuned for updates!</p>
-              <div className="text-sm mt-2 text-muted-foreground bg-yellow-50 p-3 rounded-md border border-yellow-200 flex items-start gap-2">
-                <span>📬</span>
-                <span>
-                  Not seeing our emails? Check your <strong>spam</strong> or <strong>promotions</strong> folder — and mark us as “Not Spam” so you don’t miss a thing!
-                </span>
-              </div>
+              {reminderNote}
             </div>
           ),
           className: 'bg-primary text-primary-foreground',
@@ -58,7 +62,12 @@ export const HeroSection = () => {
       } else if (data.status === 'exists') {
         toast({
           title: '👋 Already Subscribed!',
-          description: 'You’ve already signed up. Stay tuned for Rovalinks AI updates!',
+          description: (
+            <div className="space-y-2">
+              <p>You’ve already signed up. Stay tuned for Rovalinks AI updates!</p>
+              {reminderNote}
+            </div>
+          ),
           className: 'bg-yellow-100 text-yellow-800',
         });
       } else {
