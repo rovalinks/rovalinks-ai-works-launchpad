@@ -88,21 +88,17 @@ jobs:
               filepath = "subscribers/users.csv"
               os.makedirs("subscribers", exist_ok=True)
 
-              # Read or create CSV
               if os.path.exists(filepath):
                   df = pd.read_csv(filepath)
               else:
                   df = pd.DataFrame(columns=["email", "timestamp"])
 
-              # Check for duplicates
               if user_email in df["email"].values:
                   raise Exception("User already subscribed.")
 
-              # Add new subscriber
               df.loc[len(df)] = [user_email, datetime.now(timezone.utc).isoformat()]
               df.to_csv(filepath, index=False)
 
-              # Send welcome email
               welcome_html = f'''
               <html><body>
                 <div style="background: linear-gradient(135deg, #5A67D8, #805AD5); padding: 30px; color: white; text-align: center;">
@@ -128,7 +124,6 @@ jobs:
               r = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=welcome_payload)
               r.raise_for_status()
 
-              # Notify admin of success
               notify_admin(
                   f"✅ New subscriber added: {user_email}",
                   f"<html><body><p>✅ New subscriber: <strong>{user_email}</strong></p></body></html>"
@@ -141,3 +136,16 @@ jobs:
               )
               sys.exit(1)
           EOF
+
+      - name: Commit and Push CSV
+        run: |
+          git config user.name "rovalinks-bot"
+          git config user.email "bot@rovalinks.com"
+          
+          if [ -n "$(git status --porcelain subscribers/users.csv)" ]; then
+            git add subscribers/users.csv
+            git commit -m "Add new subscriber: ${{ env.EMAIL_VAL }}"
+            git push origin HEAD
+          else
+            echo "No changes to commit."
+          fi
