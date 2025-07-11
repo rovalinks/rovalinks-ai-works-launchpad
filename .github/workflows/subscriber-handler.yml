@@ -82,6 +82,9 @@ jobs:
           user_email = os.getenv("EMAIL")
           sub_state = os.getenv("SUB_STATE")
           token = os.getenv("Z_API_TOKEN")
+          # Add this line to print the length of the token
+          print(f"DEBUG: Length of Z_API_TOKEN: {len(token)}") # New line for debugging
+    
           from_email = "noreply@rovalinks.com"
           admin_email = "hr@rovalinks.com"
 
