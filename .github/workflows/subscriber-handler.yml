@@ -36,15 +36,14 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
+      - name: Install pandas
         run: pip install pandas
 
       - name: Check & Update Subscriber List
         id: check_sub
         run: |
           python <<EOF
-          import os
-          import pandas as pd
+          import os, pandas as pd
           from datetime import datetime
 
           email = os.getenv("EMAIL_VAL")
@@ -63,7 +62,7 @@ jobs:
               f.write(status)
           EOF
 
-      - name: Commit changes if new subscriber
+      - name: Commit if new subscriber
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
@@ -74,36 +73,26 @@ jobs:
       - name: Set subscription state
         run: echo "SUB_STATE=$(cat subscribers/state.txt)" >> $GITHUB_ENV
 
-      - name: Send Emails via Zoho
+      - name: Send email via ZeptoMail
         env:
-          Z_EMAIL: ${{ secrets.Z_EMAIL }}
-          Z_PASS: ${{ secrets.Z_PASS }}
           EMAIL: ${{ env.EMAIL_VAL }}
           SUB_STATE: ${{ env.SUB_STATE }}
+          Z_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
         run: |
           python <<EOF
-          import os
-          import smtplib
-          from email.mime.multipart import MIMEMultipart
-          from email.mime.text import MIMEText
+          import os, json, requests
 
           user_email = os.environ["EMAIL"]
-          from_email = os.environ["Z_EMAIL"]
-          password = os.environ["Z_PASS"]
           sub_state = os.environ["SUB_STATE"]
+          token = os.environ["Z_API_TOKEN"]
+
+          from_email = "noreply@rovalinks.com"
+          bounce_email = "noreply@rovalinks.com"
           admin_email = "hr@rovalinks.com"
 
-          server = smtplib.SMTP_SSL("smtp.zoho.in", 465)
-          server.login(from_email, password)
-
-          # Prepare email to user
-          user_msg = MIMEMultipart("alternative")
-          user_msg["From"] = from_email
-          user_msg["To"] = user_email
-
           if sub_state == "new":
-              user_msg["Subject"] = "Welcome to Rovalinks AI Works!"
-              html = """\
+              subject = "🎉 Welcome to Rovalinks AI Works!"
+              html = """
               <html>
               <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; padding: 0; margin: 0;">
                 <div style="max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -122,8 +111,8 @@ jobs:
               </html>
               """
           else:
-              user_msg["Subject"] = "You're already subscribed!"
-              html = """\
+              subject = "You're already subscribed!"
+              html = """
               <html>
               <body style="font-family: 'Segoe UI', sans-serif; background: #fffaf0; padding: 30px;">
                 <div style="max-width: 600px; margin: auto; background: #fff; border: 1px solid #f5e0c0; border-radius: 8px; padding: 30px;">
@@ -136,13 +125,29 @@ jobs:
               </html>
               """
 
-          user_msg.attach(MIMEText(html, "html"))
-          server.sendmail(from_email, user_email, user_msg.as_string())
+          payload = {
+            "bounce_address": bounce_email,
+            "from": {
+              "address": from_email,
+              "name": "Rovalinks AI"
+            },
+            "to": [
+              {"email_address": {"address": user_email}},
+              {"email_address": {"address": admin_email}} if sub_state == "new" else None
+            ],
+            "subject": subject,
+            "htmlbody": html
+          }
 
-          # Send plain text alert to admin if it's a new subscription
-          if sub_state == "new":
-              admin_msg = f"New subscriber added: {user_email}"
-              server.sendmail(from_email, admin_email, f"Subject: New Rovalinks Subscriber\n\n{admin_msg}")
+          # remove None from recipients
+          payload["to"] = [x for x in payload["to"] if x is not None]
 
-          server.quit()
+          headers = {
+            "Authorization": f"Zoho-enczapikey {token}",
+            "Content-Type": "application/json"
+          }
+
+          res = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, data=json.dumps(payload))
+          res.raise_for_status()
+          print("✅ Email sent:", res.json())
           EOF
