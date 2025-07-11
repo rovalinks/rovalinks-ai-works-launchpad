@@ -74,64 +74,89 @@ jobs:
       - name: Set subscription state
         run: echo "SUB_STATE=$(cat subscribers/state.txt)" >> $GITHUB_ENV
 
-- name: Send email via ZeptoMail
-  env:
-    EMAIL: ${{ env.EMAIL_VAL }}
-    SUB_STATE: ${{ env.SUB_STATE }}
-    Z_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
-  run: |
-    python <<EOF
-    import os, json, requests
+      - name: Send email via ZeptoMail
+        env:
+          EMAIL: ${{ env.EMAIL_VAL }}
+          SUB_STATE: ${{ env.SUB_STATE }}
+          Z_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
+        run: |
+          python <<EOF
+          import os, json, requests
 
-    user_email = os.environ["EMAIL"]
-    sub_state = os.environ["SUB_STATE"]
-    token = os.environ["Z_API_TOKEN"]
+          user_email = os.environ["EMAIL"]
+          sub_state = os.environ["SUB_STATE"]
+          token = os.environ["Z_API_TOKEN"]
 
-    from_email = "noreply@rovalinks.com"
-    admin_email = "hr@rovalinks.com"
+          from_email = "noreply@rovalinks.com"
+          bounce_email = "bounce@rovalinks.com"
+          admin_email = "hr@rovalinks.com"
 
-    if sub_state == "new":
-        subject = "🎉 Welcome to Rovalinks AI Works!"
-        html = """\
-        <div style='font-family: sans-serif'>
-          <h1>🎉 Welcome!</h1>
-          <p>Thanks for joining Rovalinks AI Works.</p>
-        </div>
-        """
-    else:
-        subject = "You're already subscribed!"
-        html = """\
-        <div style='font-family: sans-serif'>
-          <h2>👋 Already Subscribed</h2>
-          <p>No worries — you're on our list.</p>
-        </div>
-        """
+          if sub_state == "new":
+              subject = "🎉 Welcome to Rovalinks AI Works!"
+              html = """
+              <html>
+              <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; padding: 0; margin: 0;">
+                <div style="max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                  <h1 style="color: #5A67D8;">🎉 Welcome to Rovalinks AI Works!</h1>
+                  <p>Hi there,</p>
+                  <p>Thank you for signing up for updates from <strong>Rovalinks AI Works</strong>!</p>
+                  <p>You’ll get first access to new features, product launches, and updates.</p>
+                  <p style="margin-top: 20px; font-size: 14px; background: #f0f1f5; padding: 10px; border-left: 4px solid #805AD5;">
+                    📬 Check your spam/promotions folder and mark us as "Not Spam".
+                  </p>
+                  <a href="https://rovalinks.com" style="display: inline-block; margin-top: 20px; background: #5A67D8; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Visit Our Website</a>
+                  <p style="margin-top: 30px;">🚀 Let's shape the future of AI — together.</p>
+                  <p>– The Rovalinks Team</p>
+                </div>
+              </body>
+              </html>
+              """
+          else:
+              subject = "You're already subscribed!"
+              html = """
+              <html>
+              <body style="font-family: 'Segoe UI', sans-serif; background: #fffaf0; padding: 30px;">
+                <div style="max-width: 600px; margin: auto; background: #fff; border: 1px solid #f5e0c0; border-radius: 8px; padding: 30px;">
+                  <h2 style="color: #d18b00;">👋 You're already subscribed!</h2>
+                  <p>No worries — you're already on our list.</p>
+                  <p>Stay tuned for product updates, early access, and AI breakthroughs.</p>
+                  <p style="margin-top: 20px;">Visit <a href="https://rovalinks.com">rovalinks.com</a> for more.</p>
+                </div>
+              </body>
+              </html>
+              """
 
-    to_list = list(filter(None, [
-        { "email_address": { "address": user_email } },
-        { "email_address": { "address": admin_email } } if sub_state == "new" else None
-    ]))
+          # ZeptoMail email payload
+          payload = {
+            "bounce_address": bounce_email,
+            "from": {
+              "address": from_email,
+              "name": "Rovalinks AI"
+            },
+            "to": [
+              {"email_address": {"address": user_email}},
+              {"email_address": {"address": admin_email}} if sub_state == "new" else None
+            ],
+            "subject": subject,
+            "htmlbody": html
+          }
 
-    payload = {
-      "from": { "address": from_email },
-      "to": to_list,
-      "subject": subject,
-      "htmlbody": html
-    }
+          # remove None from recipients list
+          payload["to"] = [x for x in payload["to"] if x is not None]
 
-    headers = {
-      "accept": "application/json",
-      "content-type": "application/json",
-      "authorization": f"Zoho-enczapikey {token}"
-    }
+          headers = {
+            "Authorization": f"Zoho-enczapikey {token}",
+            "Content-Type": "application/json"
+          }
 
-    response = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, data=json.dumps(payload))
+          res = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, data=json.dumps(payload))
 
-    print("=== ZeptoMail API Response ===")
-    print("Status:", response.status_code)
-    try:
-        print("JSON:", response.json())
-    except:
-        print("Text:", response.text)
-    response.raise_for_status()
-    EOF
+          print("=== ZeptoMail API Response ===")
+          print("Status:", res.status_code)
+          try:
+              print("JSON:", res.json())
+          except Exception:
+              print("Raw text:", res.text)
+          res.raise_for_status()
+
+          EOF
