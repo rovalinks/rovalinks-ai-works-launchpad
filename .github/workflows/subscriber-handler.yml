@@ -29,7 +29,12 @@ jobs:
 
       - name: Set EMAIL variable
         run: |
-          echo "EMAIL_VAL=${{ github.event.client_payload.email || github.event.inputs.email }}" >> $GITHUB_ENV
+          if [ -n "${{ github.event.client_payload.email }}" ]; then
+            echo "EMAIL_VAL=${{ github.event.client_payload.email }}" >> $GITHUB_ENV
+          else
+            echo "EMAIL_VAL=${{ github.event.inputs.email }}" >> $GITHUB_ENV
+          fi
+
 
       - name: Setup Python
         uses: actions/setup-python@v5
