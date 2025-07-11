@@ -36,11 +36,9 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install pandas
-        run: pip install pandas
-
-      - name: Install requests
-        run: pip install requests
+      - name: Install dependencies
+        run: |
+          pip install pandas requests
 
       - name: Check & Update Subscriber List
         id: check_sub
@@ -90,7 +88,7 @@ jobs:
           token = os.environ["Z_API_TOKEN"]
 
           from_email = "noreply@rovalinks.com"
-          bounce_email = "noreply@rovalinks.com"
+          bounce_email = "bounce@rovalinks.com"
           admin_email = "hr@rovalinks.com"
 
           if sub_state == "new":
@@ -128,6 +126,7 @@ jobs:
               </html>
               """
 
+          # ZeptoMail email payload
           payload = {
             "bounce_address": bounce_email,
             "from": {
@@ -142,7 +141,7 @@ jobs:
             "htmlbody": html
           }
 
-          # remove None from recipients
+          # remove None from recipients list
           payload["to"] = [x for x in payload["to"] if x is not None]
 
           headers = {
@@ -151,10 +150,9 @@ jobs:
           }
 
           res = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, data=json.dumps(payload))
-          # ✅ Debug output
+
           print("=== ZeptoMail API Response ===")
           print("Status:", res.status_code)
           print("Response Text:", res.text)
           res.raise_for_status()
-          print("✅ Email sent:", res.json())
           EOF
