@@ -120,19 +120,29 @@ jobs:
               "authorization": f"Zoho-enczapikey {token}"
           }
 
-          welcome_html = f'''
-          <html><body>
-            <div style="background: linear-gradient(135deg, #5A67D8, #805AD5); padding: 30px; color: white; text-align: center;">
-              <h1>🎉 Welcome to Rovalinks AI Works!</h1>
+          welcome_html = '''<!DOCTYPE html>
+          <html>
+          <head><meta charset="UTF-8" /></head>
+          <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 0; color: #333;">
+            <div style="max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+              <div style="background: linear-gradient(135deg, #5A67D8, #805AD5); color: white; padding: 30px; text-align: center;">
+                <h1 style="margin: 0; font-size: 28px;">🎉 Welcome to Rovalinks AI Works!</h1>
+              </div>
+              <div style="padding: 30px;">
+                <p>Hi there,</p>
+                <p>Thank you for signing up for updates from <span style="color:#5A67D8; font-weight:600;">Rovalinks AI Works</span>!</p>
+                <p>We’re building the next generation of AI-powered products — fast, innovative, and built to make an impact.</p>
+                <p>You'll be the first to know about early access opportunities, product launches, and exciting updates from the team.</p>
+                <a href="https://rovalinks.com" style="display: inline-block; margin-top: 20px; background-color: #5A67D8; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold;">Visit Our Website</a>
+                <p style="margin-top: 30px;">🚀 Let's shape the future of AI — together.</p>
+                <p>The Rovalinks Team</p>
+              </div>
+              <div style="text-align: center; padding: 20px; font-size: 14px; color: #888;">
+                © 2025 Rovalinks AI Works. All rights reserved.
+              </div>
             </div>
-            <div style="padding: 30px;">
-              <p>Hi there,</p>
-              <p>Thanks for signing up for updates from <strong>Rovalinks AI Works</strong>!</p>
-              <a href="https://rovalinks.com" style="background:#5A67D8; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">Visit our site</a>
-              <p style="margin-top:20px;">– The Rovalinks Team</p>
-            </div>
-          </body></html>
-          '''
+          </body>
+          </html>'''
 
           admin_html = f"<html><body><p>✅ New subscriber: <strong>{email}</strong></p></body></html>"
 
