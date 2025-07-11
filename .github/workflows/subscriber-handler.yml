@@ -14,7 +14,7 @@ on:
         type: string
 
 jobs:
-  add-subscriber:
+  subscribe-user:
     runs-on: ubuntu-latest
 
     steps:
@@ -37,20 +37,66 @@ jobs:
       - name: Install Python dependencies
         run: pip install pandas requests
 
-      - name: Process subscriber and send email
+      - name: Add to CSV (if new)
+        id: write_csv
+        env:
+          EMAIL: ${{ env.EMAIL_VAL }}
+        run: |
+          python <<EOF
+          import os, pandas as pd, re, sys
+          from datetime import datetime, timezone
+
+          email = os.getenv("EMAIL")
+          filepath = "subscribers/users.csv"
+          os.makedirs("subscribers", exist_ok=True)
+
+          def is_valid_email(e): return re.match(r"[^@]+@[^@]+\.[^@]+", e)
+          if not is_valid_email(email):
+              print(f"Invalid email: {email}")
+              sys.exit(1)
+
+          df = pd.read_csv(filepath) if os.path.exists(filepath) else pd.DataFrame(columns=["email", "timestamp"])
+
+          if email in df["email"].values:
+              print("User already exists.")
+              with open("subscribers/state.txt", "w") as f: f.write("exists")
+              sys.exit(0)
+
+          df.loc[len(df)] = [email, datetime.now(timezone.utc).isoformat()]
+          df.to_csv(filepath, index=False)
+          with open("subscribers/state.txt", "w") as f: f.write("new")
+          EOF
+
+      - name: Commit and Push CSV
+        id: git_push
+        run: |
+          git config user.name "rovalinks-bot"
+          git config user.email "bot@rovalinks.com"
+
+          if [ "$(cat subscribers/state.txt)" = "new" ]; then
+            git add subscribers/users.csv
+            git commit -m "Add new subscriber: ${{ env.EMAIL_VAL }}" || echo "Nothing to commit"
+            git push origin HEAD || echo "push_failed" > subscribers/gitstate.txt
+          fi
+
+      - name: Check Git Success
+        run: |
+          if [ -f subscribers/gitstate.txt ]; then
+            echo "GIT_SUCCESS=false" >> $GITHUB_ENV
+          else
+            echo "GIT_SUCCESS=true" >> $GITHUB_ENV
+          fi
+
+      - name: Send Emails (only if git success & user is new)
+        if: env.GIT_SUCCESS == 'true'
         env:
           EMAIL: ${{ env.EMAIL_VAL }}
           ZEPTOMAIL_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
         run: |
           python <<EOF
-          import os
-          import re
-          import sys
-          import pandas as pd
-          from datetime import datetime, timezone
-          import requests
+          import os, requests
 
-          user_email = os.getenv("EMAIL")
+          email = os.getenv("EMAIL")
           token = os.getenv("ZEPTOMAIL_API_TOKEN")
           from_email = "noreply@rovalinks.com"
           admin_email = "hr@rovalinks.com"
@@ -61,91 +107,70 @@ jobs:
               "authorization": f"Zoho-enczapikey {token}"
           }
 
-          def is_valid_email(email):
-              return re.match(r"[^@]+@[^@]+\\.[^@]+", email)
+          welcome_html = f'''
+          <html><body>
+            <div style="background: linear-gradient(135deg, #5A67D8, #805AD5); padding: 30px; color: white; text-align: center;">
+              <h1>🎉 Welcome to Rovalinks AI Works!</h1>
+            </div>
+            <div style="padding: 30px;">
+              <p>Hi there,</p>
+              <p>Thanks for signing up for updates from <strong>Rovalinks AI Works</strong>!</p>
+              <p>You’ll get early access, updates, and more!</p>
+              <a href="https://rovalinks.com" style="background:#5A67D8; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">Visit our site</a>
+              <p style="margin-top:20px;">– The Rovalinks Team</p>
+            </div>
+          </body></html>
+          '''
 
-          def notify_admin(subject, html_body):
-              payload = {
-                  "from": {"address": from_email, "name": "Rovalinks AI"},
-                  "to": [{"email_address": {"address": admin_email, "name": "Rovalinks HR"}}],
-                  "subject": subject,
-                  "htmlbody": html_body
-              }
-              try:
-                  r = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=payload)
-                  print(f"Admin notified ({subject}):", r.status_code)
-              except Exception as e:
-                  print("Failed to notify admin:", e)
+          admin_html = f"<html><body><p>✅ New subscriber added: <strong>{email}</strong></p></body></html>"
 
-          if not is_valid_email(user_email):
-              notify_admin(
-                  "[Error] Invalid subscriber email",
-                  f"<html><body><h2 style='color:red'>❌ Invalid email</h2><p>{user_email}</p></body></html>"
-              )
-              sys.exit(1)
+          # Send welcome email
+          welcome_payload = {
+              "from": {"address": from_email, "name": "Rovalinks AI"},
+              "to": [{"email_address": {"address": email}}],
+              "subject": "🎉 Welcome to Rovalinks AI Works!",
+              "htmlbody": welcome_html
+          }
+          requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=welcome_payload).raise_for_status()
 
-          try:
-              filepath = "subscribers/users.csv"
-              os.makedirs("subscribers", exist_ok=True)
-
-              if os.path.exists(filepath):
-                  df = pd.read_csv(filepath)
-              else:
-                  df = pd.DataFrame(columns=["email", "timestamp"])
-
-              if user_email in df["email"].values:
-                  raise Exception("User already subscribed.")
-
-              df.loc[len(df)] = [user_email, datetime.now(timezone.utc).isoformat()]
-              df.to_csv(filepath, index=False)
-
-              welcome_html = f'''
-              <html><body>
-                <div style="background: linear-gradient(135deg, #5A67D8, #805AD5); padding: 30px; color: white; text-align: center;">
-                  <h1>🎉 Welcome to Rovalinks AI Works!</h1>
-                </div>
-                <div style="padding: 30px;">
-                  <p>Hi there,</p>
-                  <p>Thanks for signing up for updates from <strong>Rovalinks AI Works</strong>!</p>
-                  <p>You’ll get early access, updates, and more!</p>
-                  <a href="https://rovalinks.com" style="background:#5A67D8; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">Visit our site</a>
-                  <p style="margin-top:20px;">– The Rovalinks Team</p>
-                </div>
-              </body></html>
-              '''
-
-              welcome_payload = {
-                  "from": {"address": from_email, "name": "Rovalinks AI"},
-                  "to": [{"email_address": {"address": user_email}}],
-                  "subject": "🎉 Welcome to Rovalinks AI Works!",
-                  "htmlbody": welcome_html
-              }
-
-              r = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=welcome_payload)
-              r.raise_for_status()
-
-              notify_admin(
-                  f"✅ New subscriber added: {user_email}",
-                  f"<html><body><p>✅ New subscriber: <strong>{user_email}</strong></p></body></html>"
-              )
-
-          except Exception as e:
-              notify_admin(
-                  "[Error] Subscription failed",
-                  f"<html><body><h2 style='color:red'>❌ Subscription failed</h2><p>{str(e)}</p><p><strong>Email:</strong> {user_email}</p></body></html>"
-              )
-              sys.exit(1)
+          # Notify admin
+          admin_payload = {
+              "from": {"address": from_email, "name": "Rovalinks AI"},
+              "to": [{"email_address": {"address": admin_email}}],
+              "subject": f"New subscriber added: {email}",
+              "htmlbody": admin_html
+          }
+          requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=admin_payload).raise_for_status()
           EOF
 
-      - name: Commit and Push CSV
+      - name: Notify Admin of Git Failure
+        if: env.GIT_SUCCESS == 'false'
+        env:
+          EMAIL: ${{ env.EMAIL_VAL }}
+          ZEPTOMAIL_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
         run: |
-          git config user.name "rovalinks-bot"
-          git config user.email "bot@rovalinks.com"
-          
-          if [ -n "$(git status --porcelain subscribers/users.csv)" ]; then
-            git add subscribers/users.csv
-            git commit -m "Add new subscriber: ${{ env.EMAIL_VAL }}"
-            git push origin HEAD
-          else
-            echo "No changes to commit."
-          fi
+          python <<EOF
+          import os, requests
+
+          email = os.getenv("EMAIL")
+          token = os.getenv("ZEPTOMAIL_API_TOKEN")
+          from_email = "noreply@rovalinks.com"
+          admin_email = "hr@rovalinks.com"
+
+          headers = {
+              "accept": "application/json",
+              "content-type": "application/json",
+              "authorization": f"Zoho-enczapikey {token}"
+          }
+
+          html = f"<html><body><h2 style='color:red'>❌ Failed to save subscriber in CSV</h2><p>Email: {email}</p></body></html>"
+
+          payload = {
+              "from": {"address": from_email, "name": "Rovalinks AI"},
+              "to": [{"email_address": {"address": admin_email}}],
+              "subject": f"[Error] Failed to save subscriber: {email}",
+              "htmlbody": html
+          }
+
+          requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=payload)
+          EOF
