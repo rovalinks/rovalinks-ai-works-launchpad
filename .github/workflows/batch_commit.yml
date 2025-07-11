@@ -1,0 +1,92 @@
+name: Batch Commit Subscribers
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  commit-subscribers:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - run: pip install pandas requests
+
+      - name: Merge pending into users.csv
+        run: |
+          python <<EOF
+          import pandas as pd, os
+
+          os.makedirs("subscribers", exist_ok=True)
+          users_fp = "subscribers/users.csv"
+          pending_fp = "subscribers/pending.csv"
+
+          users = pd.read_csv(users_fp) if os.path.exists(users_fp) else pd.DataFrame(columns=["email", "timestamp"])
+          pending = pd.read_csv(pending_fp) if os.path.exists(pending_fp) else pd.DataFrame(columns=["email", "timestamp"])
+
+          if pending.empty:
+              print("No new entries.")
+              exit(0)
+
+          combined = pd.concat([users, pending]).drop_duplicates("email", keep="first")
+          combined.to_csv(users_fp, index=False)
+          open(pending_fp, "w").close()
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "rovalinks-bot"
+          git config user.email "bot@rovalinks.com"
+
+          if [ -n "$(git status --porcelain subscribers/users.csv)" ]; then
+            git add subscribers/users.csv
+            git commit -m "Batch commit subscribers"
+            git push origin HEAD
+          else
+            echo "Nothing to commit."
+          fi
+
+      - name: Notify HR on failure
+        if: failure()
+        env:
+          ZEPTOMAIL_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
+        run: |
+          python <<EOF
+          import requests, os
+
+          token = os.getenv("ZEPTOMAIL_API_TOKEN")
+          admin_email = "hr@rovalinks.com"
+          from_email = "noreply@rovalinks.com"
+
+          headers = {
+              "accept": "application/json",
+              "content-type": "application/json",
+              "authorization": f"Zoho-enczapikey {token}"
+          }
+
+          error_html = f"""
+          <html><body>
+            <h2 style='color:red'>❌ Batch commit failed</h2>
+            <p>The scheduled subscriber batch job failed.</p>
+            <p><strong>Repo:</strong> {os.getenv('GITHUB_REPOSITORY')}</p>
+            <p><strong>Run ID:</strong> <a href="https://github.com/{os.getenv('GITHUB_REPOSITORY')}/actions/runs/{os.getenv('GITHUB_RUN_ID')}">View Failed Run</a></p>
+          </body></html>
+          """
+
+          payload = {
+              "from": {"address": from_email, "name": "Rovalinks Bot"},
+              "to": [{"email_address": {"address": admin_email}}],
+              "subject": "[Error] Batch Subscriber Commit Failed",
+              "htmlbody": error_html
+          }
+
+          r = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=payload)
+          print("Email sent:", r.status_code)
+          EOF
