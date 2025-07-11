@@ -36,137 +36,119 @@ jobs:
       - name: Install dependencies
         run: pip install pandas requests
 
-      - name: Check & Update Subscriber List
-        id: check_sub
-        run: |
-          python <<EOF
-          import os, pandas as pd
-          from datetime import datetime
-
-          email = os.getenv("EMAIL_VAL")
-          os.makedirs("subscribers", exist_ok=True)
-          filepath = "subscribers/users.csv"
-          df = pd.read_csv(filepath) if os.path.exists(filepath) else pd.DataFrame(columns=["email", "timestamp"])
-
-          if email in df["email"].values:
-              status = "exists"
-          else:
-              df.loc[len(df)] = [email, datetime.utcnow().isoformat()]
-              df.to_csv(filepath, index=False)
-              status = "new"
-
-          with open("subscribers/state.txt", "w") as f:
-              f.write(status)
-          EOF
-
-      - name: Commit if new subscriber
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add subscribers/users.csv
-          git commit -m "Updated subscribers list" || echo "No changes to commit"
-          git push
-
-      - name: Set subscription state
-        run: echo "SUB_STATE=$(cat subscribers/state.txt)" >> $GITHUB_ENV
-
-      - name: Send email via ZeptoMail
+      - name: Send email via ZeptoMail (Pre-check)
         env:
           EMAIL: ${{ env.EMAIL_VAL }}
-          SUB_STATE: ${{ env.SUB_STATE }}
           ZEPTOMAIL_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
         run: |
           python <<EOF
           import os, json, requests, re, sys
 
           user_email = os.getenv("EMAIL")
-          sub_state = os.getenv("SUB_STATE")
           token = os.getenv("ZEPTOMAIL_API_TOKEN")
           from_email = "noreply@rovalinks.com"
           admin_email = "hr@rovalinks.com"
 
           def is_valid_email(email):
-              return re.match(r"[^@]+@[^@]+\.[^@]+", email)
+              return re.match(r"[^@]+@[^@]+\\.[^@]+", email)
 
           if not is_valid_email(user_email):
               print(f"Invalid email: {user_email}")
               sys.exit(1)
 
-          # HTML for user email (inline styles only)
-          user_html = f'''
-          <html>
-            <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; padding: 0; margin: 0;">
-              <div style="max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                <h1 style="color: #5A67D8;">🎉 Welcome to Rovalinks AI Works!</h1>
-                <p>Hi there,</p>
-                <p>Thank you for signing up for updates from <strong>Rovalinks AI Works</strong>!</p>
-                <p>You’ll get first access to new features, product launches, and updates.</p>
-                <p style="margin-top: 20px; font-size: 14px; background: #f0f1f5; padding: 10px; border-left: 4px solid #805AD5;">
-                  📬 Check your spam/promotions folder and mark us as "Not Spam".
-                </p>
-                <a href="https://rovalinks.com" style="display: inline-block; margin-top: 20px; background: #5A67D8; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Visit Our Website</a>
-                <p style="margin-top: 30px;">🚀 Let's shape the future of AI — together.</p>
-                <p>– The Rovalinks Team</p>
-                <div style="margin-top: 30px; font-size: 12px; color: #aaa;">© 2025 Rovalinks AI Works. All rights reserved.</div>
-              </div>
-            </body>
-          </html>
-          '''
-
-          # HTML for admin email
-          admin_html = f'''
-          <html>
-            <body style="font-family: Arial, sans-serif;">
-              <p>✅ A new subscriber has joined the list:</p>
-              <p><strong>Email:</strong> {user_email}</p>
-              <p>🕒 Timestamp: Check CSV log</p>
-            </body>
-          </html>
-          '''
-
-          headers = {
-              "accept": "application/json",
-              "content-type": "application/json",
-              "authorization": f"Zoho-enczapikey {token}"
+          # Send pre-check admin email in case of future failure
+          global_context = {
+              "email": user_email
           }
 
-          # Send welcome email to user
-          user_payload = {
-              "from": {"address": from_email, "name": "Rovalinks AI"},
-              "to": [{"email_address": {"address": user_email}}],
-              "subject": "🎉 Welcome to Rovalinks AI Works!",
-              "htmlbody": user_html
-          }
+          def notify_admin_failure(reason):
+              html = f'''
+              <html><body>
+                <h2 style="color:red">❌ Subscription failed</h2>
+                <p><strong>Email:</strong> {user_email}</p>
+                <p><strong>Reason:</strong> {reason}</p>
+              </body></html>
+              '''
 
-          print("📤 Sending welcome email to user...")
+              payload = {
+                  "from": {"address": from_email, "name": "Rovalinks AI"},
+                  "to": [{"email_address": {"address": admin_email, "name": "Rovalinks HR"}}],
+                  "subject": f"[Error] Failed to process subscriber: {user_email}",
+                  "htmlbody": html
+              }
+
+              headers = {
+                  "accept": "application/json",
+                  "content-type": "application/json",
+                  "authorization": f"Zoho-enczapikey {token}"
+              }
+
+              print("Notifying admin of failure...")
+              try:
+                  r = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=payload)
+                  print("Admin notified:", r.status_code)
+              except Exception as e:
+                  print("Failed to notify admin:", e)
+                  sys.exit(1)
+
+          # Continue script with try-except so admin is notified on failure
           try:
-              response = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=user_payload)
-              print("✅ User email status:", response.status_code)
-              print(response.text)
-              response.raise_for_status()
-          except Exception as e:
-              print("❌ Error sending user email:", e)
-              sys.exit(1)
+              import pandas as pd
+              from datetime import datetime
 
-          # Send admin email only if user is new
-          if sub_state == "new":
+              filepath = "subscribers/users.csv"
+              os.makedirs("subscribers", exist_ok=True)
+              df = pd.read_csv(filepath) if os.path.exists(filepath) else pd.DataFrame(columns=["email", "timestamp"])
+
+              if user_email in df["email"].values:
+                  raise Exception("User already exists.")
+
+              df.loc[len(df)] = [user_email, datetime.utcnow().isoformat()]
+              df.to_csv(filepath, index=False)
+
+              # Send welcome email
+              html = f'''
+              <html><body>
+                <div style="background: linear-gradient(135deg, #5A67D8, #805AD5); padding: 30px; color: white; text-align: center;">
+                  <h1 style="margin: 0; font-size: 28px;">🎉 Welcome to Rovalinks AI Works!</h1>
+                </div>
+                <div style="padding: 30px; background: #ffffff;">
+                  <p>Hi there,</p>
+                  <p>Thanks for signing up for updates from <strong>Rovalinks AI Works</strong>!</p>
+                  <p>We’re building the next generation of AI-powered products — fast, innovative, and impactful.</p>
+                  <p>You'll be the first to know about early access, launches, and exciting updates.</p>
+                  <div style="margin-top: 20px; font-size: 14px; background: #f0f1f5; padding: 10px; border-left: 4px solid #805AD5;">
+                    📬 Check your spam/promotions folder and mark us as "Not Spam".
+                  </div>
+                  <a href="https://rovalinks.com" style="display:inline-block; margin-top:20px; background:#5A67D8; color:#fff; padding:12px 24px; border-radius:6px; text-decoration:none; font-weight:bold;">Visit Our Website</a>
+                  <p style="margin-top: 30px;">🚀 Let's shape the future of AI — together.</p>
+                  <p>The Rovalinks Team</p>
+                </div>
+              </body></html>
+              '''
+
+              welcome_payload = {
+                  "from": {"address": from_email, "name": "Rovalinks AI"},
+                  "to": [{"email_address": {"address": user_email}}],
+                  "subject": "🎉 Welcome to Rovalinks AI Works!",
+                  "htmlbody": html
+              }
+
+              r = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=welcome_payload)
+              r.raise_for_status()
+
+              # Notify admin success
+              admin_html = f'<html><body><p>✅ New subscriber: <strong>{user_email}</strong></p></body></html>'
               admin_payload = {
                   "from": {"address": from_email, "name": "Rovalinks AI"},
                   "to": [{"email_address": {"address": admin_email, "name": "Rovalinks HR"}}],
                   "subject": f"New subscriber added: {user_email}",
                   "htmlbody": admin_html
               }
+              r = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=admin_payload)
+              print("✅ Admin notified of success.")
 
-              print("📤 Sending admin notification email...")
-              try:
-                  admin_response = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=admin_payload)
-                  print("✅ Admin email status:", admin_response.status_code)
-                  print(admin_response.text)
-                  admin_response.raise_for_status()
-              except Exception as e:
-                  print("❌ Error sending admin email:", e)
-                  sys.exit(1)
+          except Exception as e:
+              notify_admin_failure(str(e))
+              sys.exit(1)
           EOF
-
-      - name: Clean up
-        run: rm -f subscribers/state.txt
