@@ -88,7 +88,7 @@ jobs:
           token = os.environ["Z_API_TOKEN"]
 
           from_email = "noreply@rovalinks.com"
-          bounce_email = "bounce@rovalinks.com"
+          bounce_email = "bounce+launchpad-subscriber-alerts@zeptomail.net"
           admin_email = "hr@rovalinks.com"
 
           if sub_state == "new":
