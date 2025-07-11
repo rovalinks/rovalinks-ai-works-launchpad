@@ -92,7 +92,7 @@ jobs:
               print(f"Invalid email: {user_email}")
               sys.exit(1)
 
-          subject = "🎉 Welcome to Rovalinks AI Works!" if sub_state == "new" else "You're already subscribed!"
+          subject = "Welcome to Rovalinks AI Works!" if sub_state == "new" else "You're already subscribed!"
           html = f'''
           <html>
           <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; padding: 0; margin: 0;">
