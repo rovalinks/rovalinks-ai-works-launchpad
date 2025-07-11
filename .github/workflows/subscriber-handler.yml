@@ -1,8 +1,4 @@
 name: Handle New Subscriber
-
-concurrency:
-  group: subscriber-csv-lock
-  cancel-in-progress: false
   
 permissions:
   contents: write
@@ -22,6 +18,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      - name: Serialize workflow execution
+        uses: softprops/turnstyle@v1
+        with:
+          poll-interval-seconds: 15
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Checkout repository
         uses: actions/checkout@v4
 
