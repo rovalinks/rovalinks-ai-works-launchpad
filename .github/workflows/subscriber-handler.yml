@@ -43,6 +43,8 @@ jobs:
         run: |
           python <<EOF
           import os, json, requests, re, sys
+          from datetime import datetime, timezone
+          import pandas as pd
 
           user_email = os.getenv("EMAIL")
           token = os.getenv("ZEPTOMAIL_API_TOKEN")
@@ -56,9 +58,10 @@ jobs:
               print(f"Invalid email: {user_email}")
               sys.exit(1)
 
-          # Send pre-check admin email in case of future failure
-          global_context = {
-              "email": user_email
+          headers = {
+              "accept": "application/json",
+              "content-type": "application/json",
+              "authorization": f"Zoho-enczapikey {token}"
           }
 
           def notify_admin_failure(reason):
@@ -77,12 +80,6 @@ jobs:
                   "htmlbody": html
               }
 
-              headers = {
-                  "accept": "application/json",
-                  "content-type": "application/json",
-                  "authorization": f"Zoho-enczapikey {token}"
-              }
-
               print("Notifying admin of failure...")
               try:
                   r = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=payload)
@@ -91,11 +88,7 @@ jobs:
                   print("Failed to notify admin:", e)
                   sys.exit(1)
 
-          # Continue script with try-except so admin is notified on failure
           try:
-              import pandas as pd
-              from datetime import datetime, timezone
-
               filepath = "subscribers/users.csv"
               os.makedirs("subscribers", exist_ok=True)
               df = pd.read_csv(filepath) if os.path.exists(filepath) else pd.DataFrame(columns=["email", "timestamp"])
