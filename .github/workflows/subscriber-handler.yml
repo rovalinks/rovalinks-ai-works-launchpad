@@ -151,6 +151,10 @@ jobs:
           }
 
           res = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, data=json.dumps(payload))
+          # ✅ Debug output
+          print("=== ZeptoMail API Response ===")
+          print("Status:", res.status_code)
+          print("Response Text:", res.text)
           res.raise_for_status()
           print("✅ Email sent:", res.json())
           EOF
