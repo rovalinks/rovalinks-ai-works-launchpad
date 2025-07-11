@@ -92,78 +92,11 @@ jobs:
               print(f"Invalid email: {user_email}")
               sys.exit(1)
 
-          # Build HTML content for the user
+          # HTML for user email (inline styles only)
           user_html = f'''
           <html>
-              <head>
-              <meta charset="UTF-8" />
-              <title>Welcome to Rovalinks</title>
-              <style>
-                body {
-                  font-family: 'Segoe UI', sans-serif;
-                  background-color: #f4f6f8;
-                  margin: 0;
-                  padding: 0;
-                  color: #333;
-                }
-                .container {
-                  max-width: 600px;
-                  margin: 40px auto;
-                  background: #ffffff;
-                  border-radius: 8px;
-                  overflow: hidden;
-                  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-                }
-                .header {
-                  background: linear-gradient(135deg, #5A67D8, #805AD5);
-                  color: white;
-                  padding: 30px;
-                  text-align: center;
-                }
-                .header h1 {
-                  margin: 0;
-                  font-size: 28px;
-                }
-                .content {
-                  padding: 30px;
-                }
-                .content p {
-                  font-size: 16px;
-                  line-height: 1.6;
-                }
-                .highlight {
-                  color: #5A67D8;
-                  font-weight: 600;
-                }
-                .footer {
-                  text-align: center;
-                  padding: 20px;
-                  font-size: 14px;
-                  color: #888;
-                }
-                .cta-button {
-                  display: inline-block;
-                  margin-top: 20px;
-                  background-color: #5A67D8;
-                  color: white;
-                  text-decoration: none;
-                  padding: 12px 24px;
-                  border-radius: 6px;
-                  font-weight: bold;
-                }
-                .spam-note {
-                  margin-top: 25px;
-                  font-size: 14px;
-                  color: #666;
-                  background-color: #f0f1f5;
-                  padding: 15px;
-                  border-left: 4px solid #805AD5;
-                  border-radius: 4px;
-                }
-              </style>
-            </head>
             <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; padding: 0; margin: 0;">
-              <div style="max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+              <div style="max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                 <h1 style="color: #5A67D8;">🎉 Welcome to Rovalinks AI Works!</h1>
                 <p>Hi there,</p>
                 <p>Thank you for signing up for updates from <strong>Rovalinks AI Works</strong>!</p>
@@ -180,7 +113,7 @@ jobs:
           </html>
           '''
 
-          # Build HTML content for the admin notification
+          # HTML for admin email
           admin_html = f'''
           <html>
             <body style="font-family: Arial, sans-serif;">
@@ -197,7 +130,7 @@ jobs:
               "authorization": f"Zoho-enczapikey {token}"
           }
 
-          # Send user email
+          # Send welcome email to user
           user_payload = {
               "from": {"address": from_email, "name": "Rovalinks AI"},
               "to": [{"email_address": {"address": user_email}}],
@@ -215,7 +148,7 @@ jobs:
               print("❌ Error sending user email:", e)
               sys.exit(1)
 
-          # Send admin email only if it's a new subscriber
+          # Send admin email only if user is new
           if sub_state == "new":
               admin_payload = {
                   "from": {"address": from_email, "name": "Rovalinks AI"},
@@ -224,7 +157,7 @@ jobs:
                   "htmlbody": admin_html
               }
 
-              print("📤 Sending notification email to admin...")
+              print("📤 Sending admin notification email...")
               try:
                   admin_response = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=admin_payload)
                   print("✅ Admin email status:", admin_response.status_code)
