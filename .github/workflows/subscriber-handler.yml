@@ -127,11 +127,12 @@ jobs:
 
           payload = {
             "from": {
-              "address": from_email
+              "address": from_email,
+              "name": "Rovalinks AI"
             },
             "to": list(filter(None, [
-              {"email_address": {"address": user_email}},
-              {"email_address": {"address": admin_email, "name": "Rovalinks HR"}} if sub_state == "new" else None
+              { "email_address": { "address": user_email } },
+              { "email_address": { "address": admin_email, "name": "Rovalinks HR" } } if sub_state == "new" else None
             ])),
             "subject": subject,
             "htmlbody": html
