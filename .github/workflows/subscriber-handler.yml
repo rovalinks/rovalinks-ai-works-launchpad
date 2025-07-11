@@ -88,7 +88,6 @@ jobs:
           token = os.environ["Z_API_TOKEN"]
 
           from_email = "noreply@rovalinks.com"
-          bounce_email = "bounce@rovalinks.com"
           admin_email = "hr@rovalinks.com"
 
           if sub_state == "new":
@@ -126,37 +125,31 @@ jobs:
               </html>
               """
 
-          # ZeptoMail email payload
           payload = {
-            "bounce_address": bounce_email,
             "from": {
-              "address": from_email,
-              "name": "Rovalinks AI"
+              "address": from_email
             },
-            "to": [
+            "to": list(filter(None, [
               {"email_address": {"address": user_email}},
-              {"email_address": {"address": admin_email}} if sub_state == "new" else None
-            ],
+              {"email_address": {"address": admin_email, "name": "Rovalinks HR"}} if sub_state == "new" else None
+            ])),
             "subject": subject,
             "htmlbody": html
           }
 
-          # remove None from recipients list
-          payload["to"] = [x for x in payload["to"] if x is not None]
-
           headers = {
-            "Authorization": f"Zoho-enczapikey {token}",
-            "Content-Type": "application/json"
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": f"Zoho-enczapikey {token}"
           }
 
-          res = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, data=json.dumps(payload))
+          response = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, data=json.dumps(payload))
 
           print("=== ZeptoMail API Response ===")
-          print("Status:", res.status_code)
+          print("Status:", response.status_code)
           try:
-              print("JSON:", res.json())
+              print("Response JSON:", response.json())
           except Exception:
-              print("Raw text:", res.text)
-          res.raise_for_status()
-
+              print("Raw text:", response.text)
+          response.raise_for_status()
           EOF
