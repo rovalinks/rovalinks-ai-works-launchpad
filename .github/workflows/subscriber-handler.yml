@@ -60,7 +60,7 @@ jobs:
           df.to_csv(filepath, index=False)
           EOF
 
-      - name: Send welcome + admin email
+      - name: Send welcome and admin emails
         env:
           EMAIL: ${{ env.EMAIL_VAL }}
           ZEPTOMAIL_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
@@ -119,3 +119,12 @@ jobs:
               "htmlbody": admin_html
           })
           EOF
+
+      - name: Commit and push pending.csv
+        run: |
+          git config user.name "rovalinks-bot"
+          git config user.email "bot@rovalinks.com"
+          git pull --rebase
+          git add subscribers/pending.csv
+          git commit -m "Add pending subscriber: ${{ env.EMAIL_VAL }}" || echo "No changes to commit"
+          git push origin HEAD || echo "Push failed, maybe due to conflict"
