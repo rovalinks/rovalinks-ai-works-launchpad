@@ -77,12 +77,11 @@ jobs:
           Z_API_TOKEN: ${{ secrets.ZEPTOMAIL_API_TOKEN }}
         run: |
           python <<EOF
-          import os, json, requests, re
+          import os, json, requests, re, sys
 
           user_email = os.getenv("EMAIL")
           sub_state = os.getenv("SUB_STATE")
           token = os.getenv("Z_API_TOKEN")
-
           from_email = "noreply@rovalinks.com"
           admin_email = "hr@rovalinks.com"
 
@@ -91,52 +90,41 @@ jobs:
 
           if not is_valid_email(user_email):
               print(f"Invalid email: {user_email}")
-              exit(1)
+              sys.exit(1)
 
+          subject = "🎉 Welcome to Rovalinks AI Works!" if sub_state == "new" else "You're already subscribed!"
+          html = f'''
+          <html>
+          <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; padding: 0; margin: 0;">
+            <div style="max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+              <h1 style="color: #5A67D8;">{subject}</h1>
+              <p>Hi there,</p>
+              <p>{"Thank you for signing up for updates from <strong>Rovalinks AI Works</strong>!" if sub_state == "new" else "You're already on our subscriber list."}</p>
+              <p>{"You’ll get first access to new features, product launches, and updates." if sub_state == "new" else "Stay tuned for early access, launches, and more AI news."}</p>
+              <p style="margin-top: 20px; font-size: 14px; background: #f0f1f5; padding: 10px; border-left: 4px solid #805AD5;">
+                📬 Check your spam/promotions folder and mark us as \"Not Spam\".
+              </p>
+              <a href="https://rovalinks.com" style="display: inline-block; margin-top: 20px; background: #5A67D8; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Visit Our Website</a>
+              <p style="margin-top: 30px;">🚀 Let's shape the future of AI — together.</p>
+              <p>– The Rovalinks Team</p>
+              <div style="margin-top: 30px; font-size: 12px; color: #aaa;">© 2025 Rovalinks AI Works. All rights reserved.</div>
+            </div>
+          </body>
+          </html>
+          '''
+
+          to_list = [
+              {"email_address": {"address": user_email}},
+          ]
           if sub_state == "new":
-              subject = "🎉 Welcome to Rovalinks AI Works!"
-              html = """
-              <html>
-              <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; padding: 0; margin: 0;">
-                <div style="max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                  <h1 style="color: #5A67D8;">🎉 Welcome to Rovalinks AI Works!</h1>
-                  <p>Hi there,</p>
-                  <p>Thank you for signing up for updates from <strong>Rovalinks AI Works</strong>!</p>
-                  <p>You’ll get first access to new features, product launches, and updates.</p>
-                  <p style="margin-top: 20px; font-size: 14px; background: #f0f1f5; padding: 10px; border-left: 4px solid #805AD5;">
-                    📬 Check your spam/promotions folder and mark us as "Not Spam".
-                  </p>
-                  <a href="https://rovalinks.com" style="display: inline-block; margin-top: 20px; background: #5A67D8; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Visit Our Website</a>
-                  <p style="margin-top: 30px;">🚀 Let's shape the future of AI — together.</p>
-                  <p>– The Rovalinks Team</p>
-                </div>
-              </body>
-              </html>
-              """
-          else:
-              subject = "You're already subscribed!"
-              html = """
-              <html>
-              <body style="font-family: 'Segoe UI', sans-serif; background: #fffaf0; padding: 30px;">
-                <div style="max-width: 600px; margin: auto; background: #fff; border: 1px solid #f5e0c0; border-radius: 8px; padding: 30px;">
-                  <h2 style="color: #d18b00;">👋 You're already subscribed!</h2>
-                  <p>No worries — you're already on our list.</p>
-                  <p>Stay tuned for product updates, early access, and AI breakthroughs.</p>
-                  <p style="margin-top: 20px;">Visit <a href="https://rovalinks.com">rovalinks.com</a> for more.</p>
-                </div>
-              </body>
-              </html>
-              """
+              to_list.append({"email_address": {"address": admin_email, "name": "Rovalinks HR"}})
 
           payload = {
               "from": {
                   "address": from_email,
                   "name": "Rovalinks AI"
               },
-              "to": list(filter(None, [
-                  { "email_address": { "address": user_email } },
-                  { "email_address": { "address": admin_email, "name": "Rovalinks HR" } } if sub_state == "new" else None
-              ])),
+              "to": to_list,
               "subject": subject,
               "htmlbody": html
           }
@@ -147,16 +135,17 @@ jobs:
               "authorization": f"Zoho-enczapikey {token}"
           }
 
+          print("📤 Sending email to ZeptoMail...")
+          print(json.dumps(payload, indent=2))
+
           try:
-              print("Sending email payload to ZeptoMail:")
-              print(json.dumps(payload, indent=2))
               response = requests.post("https://api.zeptomail.in/v1.1/email", headers=headers, json=payload)
-              print("Status:", response.status_code)
-              print("Response:", response.json())
+              print("✅ Status:", response.status_code)
+              print("🧾 Response:", response.text)
               response.raise_for_status()
           except Exception as e:
-              print("Error sending email:", str(e))
-              exit(1)
+              print("❌ Error sending email:", str(e))
+              sys.exit(1)
           EOF
 
       - name: Clean up
