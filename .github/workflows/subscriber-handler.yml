@@ -103,7 +103,7 @@ jobs:
               if user_email in df["email"].values:
                   raise Exception("User already exists.")
 
-              df.loc[len(df)] = [user_email, datetime.utcnow().isoformat()]
+              df.loc[len(df)] = [user_email, datetime.now(timezone.utc).isoformat()]
               df.to_csv(filepath, index=False)
 
               # Send welcome email
