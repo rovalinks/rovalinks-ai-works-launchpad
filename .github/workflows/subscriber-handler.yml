@@ -39,6 +39,9 @@ jobs:
       - name: Install pandas
         run: pip install pandas
 
+      - name: Install requests
+        run: pip install requests
+
       - name: Check & Update Subscriber List
         id: check_sub
         run: |
