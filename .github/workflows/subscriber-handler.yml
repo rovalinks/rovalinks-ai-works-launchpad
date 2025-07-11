@@ -153,6 +153,10 @@ jobs:
 
           print("=== ZeptoMail API Response ===")
           print("Status:", res.status_code)
-          print("Response Text:", res.text)
+          try:
+              print("JSON:", res.json())
+          except Exception:
+              print("Raw text:", res.text)
           res.raise_for_status()
+
           EOF
