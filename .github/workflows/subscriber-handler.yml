@@ -82,7 +82,7 @@ jobs:
             while [ $attempt -lt 3 ]; do
               git pull --rebase || true
               git add subscribers/users.csv
-              git commit -m "Add subscriber: ${{ env.EMAIL_VAL }}" || true
+              git commit -m "New subscriber Added" || true
               git push origin HEAD && success=1 && break
               echo "Push failed. Retrying in 10 seconds..."
               sleep 10
