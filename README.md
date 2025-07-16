@@ -92,3 +92,5 @@ As of the latest information in the sources:
 
 For any inquiries or feedback regarding this repository, please refer to the Rovalinks organization. You can also provide feedback directly via the GitHub search interface.
 ```
+
+<!-- trigger -->
