@@ -4,7 +4,7 @@ export const Footer = () => {
       <div className="container mx-auto px-4 text-center">
         <div className="space-y-4">
           <p className="text-foreground font-medium">
-            © 2025 Rovalinks AI Works. All rights reserved.
+            © 2026 Rovalinks AI Works. All rights reserved.
           </p>
           <p className="text-muted-foreground">
             Built with intelligence. Delivered with heart. ❤️
